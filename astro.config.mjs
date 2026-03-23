@@ -3,10 +3,10 @@ import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
 export default defineConfig({
-	site: 'https://ia-ide.dev',
+	site: 'https://abbado.dev',
 	integrations: [
 		starlight({
-			title: 'ia-ide',
+			title: 'abbado',
 			description: 'AI coding agent orchestrator. Multi-agent, multi-model, multi-CLI.',
 			logo: {
 				light: './src/assets/logo-light.svg',
@@ -14,11 +14,11 @@ export default defineConfig({
 				replacesTitle: false,
 			},
 			social: [
-				{ icon: 'github', label: 'GitHub', href: 'https://github.com/Raznak/ia-ide' },
+				{ icon: 'github', label: 'GitHub', href: 'https://github.com/abbado-dev/abbado' },
 				{ icon: 'discord', label: 'Discord', href: '#' },
 			],
 			editLink: {
-				baseUrl: 'https://github.com/Raznak/ia-ide-website/edit/main/',
+				baseUrl: 'https://github.com/abbado-dev/abbado-website/edit/main/',
 			},
 			customCss: ['./src/styles/custom.css'],
 			sidebar: [

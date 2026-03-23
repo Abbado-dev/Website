@@ -1,5 +1,5 @@
 {
-  "name": "ia-ide-website",
+  "name": "abbado-website",
   "type": "module",
   "version": "0.0.1",
   "scripts": {
@@ -11,9 +11,7 @@
   },
   "dependencies": {
     "@astrojs/starlight": "^0.38.2",
-    "@astrojs/tailwind": "^6.0.2",
     "astro": "^6.0.1",
-    "sharp": "^0.34.2",
-    "tailwindcss": "^4.2.2"
+    "sharp": "^0.34.2"
   }
 }
