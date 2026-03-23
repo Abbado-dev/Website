@@ -17,7 +17,7 @@ export default defineConfig({
 				{ icon: 'discord', label: 'Discord', href: '#' },
 			],
 			editLink: {
-				baseUrl: 'https://github.com/abbado-dev/abbado-website/edit/main/',
+				baseUrl: 'https://github.com/abbado-dev/website/edit/main/',
 			},
 			customCss: ['./src/styles/custom.css'],
 			sidebar: [
