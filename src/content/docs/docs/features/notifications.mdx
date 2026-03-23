@@ -1,0 +1,107 @@
+---
+title: Notifications
+description: Discord webhook setup, per-run notification toggle, and notification types.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+## Overview
+
+ia-ide sends notifications to a **Discord webhook** when agents finish, fail, or need your attention. This lets you step away from the dashboard while agents work and get alerted when something requires action.
+
+## Setup
+
+<Steps>
+
+1. **Create a Discord webhook**
+
+   In your Discord server:
+   - Go to **Server Settings > Integrations > Webhooks**
+   - Click **New Webhook**
+   - Choose a channel and copy the webhook URL
+
+2. **Configure in ia-ide**
+
+   Go to **Settings** in the ia-ide dashboard, or use the API:
+
+   ```bash
+   curl -X PUT http://localhost:3000/api/settings/notifications \
+     -H "Content-Type: application/json" \
+     -d '{
+       "discord_webhook_url": "https://discord.com/api/webhooks/...",
+       "notify_on_pipeline_complete": true,
+       "notify_on_run_failed": true
+     }'
+   ```
+
+3. **Enable per-run notifications**
+
+   Each run has a notification toggle. Click the bell icon on a run, or use the API:
+
+   ```bash
+   curl -X POST http://localhost:3000/api/runs/<run-id>/notify \
+     -H "Content-Type: application/json" \
+     -d '{"notify": true}'
+   ```
+
+</Steps>
+
+## Notification Types
+
+### Session Idle
+
+**Trigger**: Agent finished responding (Stop hook) and the run has notifications enabled.
+
+**Message**: Includes the run ID and a summary of the last assistant message (first 200 characters).
+
+### Session Ended
+
+**Trigger**: Session terminated (SessionEnd hook) and the run has notifications enabled.
+
+**Message**: Run ID with completion confirmation.
+
+### Run Failed
+
+**Trigger**: Agent encountered an error (StopFailure hook) or the adapter crashed.
+
+**Message**: Run ID with the error reason (first 200 characters).
+
+This notification is sent regardless of the per-run toggle — it uses the global `notify_on_run_failed` setting.
+
+### Needs Attention
+
+**Trigger**: Agent is waiting for permission or is idle and needs user input (Notification hook with `permission_prompt` or `idle_prompt` type).
+
+**Message**: Run ID with the notification message.
+
+## Settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `discord_webhook_url` | `""` | Discord webhook URL. Empty = notifications disabled. |
+| `notify_on_pipeline_complete` | `true` | Send notification when a pipeline/session completes |
+| `notify_on_run_failed` | `true` | Send notification when a run fails |
+
+### API
+
+```
+GET  /api/settings/notifications     # Get current config
+PUT  /api/settings/notifications     # Update config
+POST /api/runs/{id}/notify           # Toggle per-run notifications
+```
+
+## Per-Run Toggle
+
+Notifications are opt-in per run. When you create a session, notifications default to off. Toggle them on for long-running sessions where you want to be alerted.
+
+The toggle affects:
+- **Session idle** notifications (Stop hook)
+- **Session ended** notifications (SessionEnd hook)
+
+It does NOT affect:
+- **Run failed** notifications (always sent if `notify_on_run_failed` is true)
+- **Needs attention** notifications (always sent for permission/idle prompts)
+
+<Aside type="tip">
+For batch operations with many agents, enable notifications only on the ones you care about most. This avoids notification fatigue.
+</Aside>

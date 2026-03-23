@@ -1,0 +1,77 @@
+---
+title: ia-ide
+description: AI coding agent orchestrator. Multi-agent, multi-model, multi-CLI.
+template: splash
+hero:
+  tagline: Launch AI coding agents on your projects. Watch them work in real-time. Manage the full lifecycle from code to PR — all from a single dashboard.
+  image:
+    file: ../../assets/logo-dark.svg
+  actions:
+    - text: Get Started
+      link: /docs/installation/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/Raznak/ia-ide
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Why ia-ide?
+
+You already use Claude Code and Codex in your terminal. But when you're running 6 agents in parallel across multiple repos, juggling terminals doesn't scale.
+
+ia-ide gives you **one dashboard** to orchestrate everything.
+
+<CardGrid stagger>
+	<Card title="Interactive Terminal" icon="seti:shell">
+		Real Claude/Codex CLI in your browser via xterm.js. Paste, type, interact — everything works. Sessions survive browser disconnection.
+	</Card>
+	<Card title="Multi-Agent Parallel" icon="rocket">
+		Launch multiple agents simultaneously on the same project. Each gets its own git worktree — no conflicts.
+	</Card>
+	<Card title="CLI Hooks" icon="puzzle">
+		Claude Code hooks notify ia-ide in real-time: tool usage, permissions, task progress, completion. Zero parsing.
+	</Card>
+	<Card title="Git Workflow" icon="github">
+		View diffs, commit, rename branches, push, create PRs/MRs — all from the sidebar. GitHub and GitLab.
+	</Card>
+	<Card title="Notifications" icon="discord">
+		Discord alerts when agents finish, need permission, or fail. Per-session toggle.
+	</Card>
+	<Card title="Agent Templates" icon="document">
+		14 preconfigured agents: PR Reviewer, Bug Fixer, Test Writer, Security Auditor... Or create your own.
+	</Card>
+</CardGrid>
+
+## How it works
+
+```bash
+# Install and run
+cargo run                    # Backend on :3000
+cd frontend && npm run dev   # Frontend on :5173
+
+# Or use the Makefile
+make dev
+```
+
+1. **Create a project** → add your git repos
+2. **Pick an agent** from the template library
+3. **Click "+ Session"** → terminal opens with Claude or Codex
+4. **Work interactively** → the agent codes, you supervise
+5. **Review changes** → diff viewer, commit, push, create PR
+6. **Get notified** on Discord when the agent finishes
+
+## Architecture
+
+| Layer | Technology |
+|-------|-----------|
+| **Backend** | Rust (axum, tokio, sqlx, SQLite) |
+| **Frontend** | React 19, Vite, TypeScript, TanStack Query, Zustand |
+| **Terminal** | xterm.js + portable-pty (WebSocket) |
+| **Execution** | Local processes with CLI hooks |
+| **Git** | GitHub (`gh`) and GitLab (`glab`) |
+| **Notifications** | Discord webhooks |
+
+No Docker required. Agents run as local processes using your existing CLI credentials.

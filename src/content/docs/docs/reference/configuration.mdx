@@ -1,0 +1,181 @@
+---
+title: Configuration
+description: Environment variables, data directory, SQLite database, and settings API.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Environment Variables
+
+ia-ide is configured through environment variables. There is no configuration file.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `IA_IDE_DATA_DIR` | `./data` | Directory for SQLite database, worktrees, and run state |
+| `IA_IDE_BIND` | `127.0.0.1:3000` | Address and port the server binds to |
+| `IA_IDE_FRONTEND_DIR` | `./frontend/dist` | Path to the built frontend (production mode only) |
+| `RUST_LOG` | `ia_ide=debug` | Log level using the `tracing` crate filter syntax |
+
+### Examples
+
+Run on a different port:
+
+```bash
+IA_IDE_BIND=0.0.0.0:8080 cargo run
+```
+
+Custom data directory:
+
+```bash
+IA_IDE_DATA_DIR=/opt/ia-ide/data cargo run
+```
+
+Verbose logging:
+
+```bash
+RUST_LOG=ia_ide=trace cargo run
+```
+
+Quiet logging (errors only):
+
+```bash
+RUST_LOG=ia_ide=error cargo run
+```
+
+## Data Directory
+
+The data directory (`IA_IDE_DATA_DIR`) contains all persistent state:
+
+```
+$IA_IDE_DATA_DIR/
+├── ia-ide.db             # SQLite database
+└── runs/
+    └── <run-uuid>/
+        ├── worktree/
+        │   └── <repo-name>/    # Git worktree
+        ├── cli-state/          # CLI session state (for resume)
+        ├── hook.sh             # Hook script for this run
+        └── claude-hooks.json   # Hook configuration
+```
+
+The data directory is created automatically on first run. It is gitignored in the ia-ide repository.
+
+### SQLite Database
+
+ia-ide uses a single SQLite database (`ia-ide.db`) for all persistent data:
+
+- **projects** — project records
+- **project_repos** — repos linked to projects
+- **agents** — agent configurations
+- **runs** — run metadata and status
+- **events** — immutable event log
+- **settings** — key-value configuration store
+
+Migrations run automatically on startup. The database is created if it doesn't exist.
+
+<Aside type="note">
+SQLite is chosen for simplicity — no external database server to install or manage. The WAL journal mode is used for concurrent read/write access.
+</Aside>
+
+### Run Directories
+
+Each run gets its own directory under `$IA_IDE_DATA_DIR/runs/<run-uuid>/`. This includes:
+
+- **worktree/** — git worktrees for each repo (where the agent works)
+- **cli-state/** — CLI session state for pause/resume
+- **hook.sh** — the hook script that posts events to ia-ide
+- **claude-hooks.json** — hook configuration passed to the CLI via `--settings`
+
+Deleting a run via the API cleans up all of these.
+
+## Settings API
+
+Runtime configuration is stored in the SQLite `settings` table as key-value pairs. These are managed through the API:
+
+### Provider Models
+
+```
+GET /api/settings/models
+PUT /api/settings/models
+```
+
+Controls which providers and models appear in the agent creation form.
+
+**Schema:**
+
+```json
+{
+  "providers": [
+    {
+      "id": "claude-code",
+      "name": "Claude",
+      "models": [
+        {
+          "id": "claude-sonnet-4-6",
+          "name": "Sonnet 4.6",
+          "description": "Fast, balanced"
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Defaults:**
+
+| Provider | Models |
+|----------|--------|
+| Claude (`claude-code`) | Sonnet 4.6, Opus 4.6, Haiku 4.5 |
+| ChatGPT (`codex`) | o3, o4-mini, GPT-4.1 |
+
+### Notification Settings
+
+```
+GET /api/settings/notifications
+PUT /api/settings/notifications
+```
+
+**Schema:**
+
+```json
+{
+  "discord_webhook_url": "https://discord.com/api/webhooks/...",
+  "notify_on_pipeline_complete": true,
+  "notify_on_run_failed": true
+}
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `discord_webhook_url` | string | `""` | Discord webhook URL. Empty disables notifications. |
+| `notify_on_pipeline_complete` | bool | `true` | Notify when sessions complete or go idle |
+| `notify_on_run_failed` | bool | `true` | Notify when runs fail |
+
+## Frontend Configuration
+
+The frontend dev server (Vite) proxies API requests to `http://localhost:3000`. This is configured in the Vite config and requires no manual setup.
+
+For production, build the frontend with `npm run build` and set `IA_IDE_FRONTEND_DIR` to point to the `dist` directory. The Rust server serves the static files directly.
+
+```bash
+cd frontend && npm run build
+IA_IDE_FRONTEND_DIR=./frontend/dist cargo run --release
+```
+
+## Network
+
+ia-ide binds to `127.0.0.1:3000` by default — localhost only. To expose it on the network:
+
+```bash
+IA_IDE_BIND=0.0.0.0:3000 cargo run
+```
+
+<Aside type="caution">
+ia-ide has no authentication. Do not expose it to the public internet. Use it on localhost or behind a VPN/SSH tunnel.
+</Aside>
+
+The server uses:
+
+- **HTTP** for REST API and SSE
+- **WebSocket** for terminal connections (upgrades from HTTP)
+- No TLS — use a reverse proxy (nginx, Caddy) if you need HTTPS

@@ -1,0 +1,89 @@
+---
+title: Task Tracking
+description: How ia-ide captures and displays TaskCreate and TaskUpdate events from Claude Code for progress tracking.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Overview
+
+When Claude Code uses the `TaskCreate` and `TaskUpdate` tools during a session, ia-ide captures these events and reconstructs a task list for each run. This gives you a structured view of what the agent planned to do and how far it got.
+
+## How It Works
+
+ia-ide does not implement its own task system. Instead, it **reconstructs tasks from hook events**:
+
+1. The agent calls `TaskCreate` with a subject, description, and status
+2. The `PreToolUse` hook fires — ia-ide persists the tool call as an `agent.tool_call` event
+3. The `PostToolUse` hook fires — ia-ide persists the tool result as an `agent.tool_result` event (containing the task ID)
+4. When you request the task list, ia-ide replays all events and pairs `TaskCreate` calls with their results
+
+For `TaskUpdate` events, the same process applies — ia-ide updates the task's status, subject, or description based on the tool input.
+
+## Task States
+
+Tasks go through these states (as set by the agent):
+
+| Status | Meaning |
+|--------|---------|
+| `pending` | Task created but not started |
+| `in_progress` | Agent is currently working on this task |
+| `completed` | Task finished successfully |
+| `deleted` | Task removed (filtered from display) |
+
+## API
+
+### Get Tasks for a Run
+
+```
+GET /api/runs/{id}/tasks
+```
+
+Returns a list of tasks reconstructed from events:
+
+```json
+[
+  {
+    "id": "task-1",
+    "subject": "Add input validation to login form",
+    "description": "Validate email format and password length",
+    "status": "completed"
+  },
+  {
+    "id": "task-2",
+    "subject": "Write unit tests for validation",
+    "status": "in_progress"
+  }
+]
+```
+
+Tasks with status `deleted` are filtered out of the response.
+
+## Event Reconstruction
+
+The task list is derived from events, not stored separately. This means:
+
+- **No separate task table** — tasks come from `agent.tool_call` and `agent.tool_result` events
+- **Consistent with event history** — tasks always reflect what actually happened
+- **No sync issues** — the task list is computed on read, not maintained in parallel
+
+The reconstruction algorithm:
+
+1. Iterate all events for the run in order
+2. For `agent.tool_call` events with tool `TaskCreate`, store the input (subject, description, status)
+3. For `agent.tool_result` events with tool `TaskCreate`, extract the task ID from the response and create the task entry
+4. For `agent.tool_call` events with tool `TaskUpdate`, update the matching task's fields
+
+<Aside type="note">
+Task tracking only works with Claude Code, since it's the CLI that provides the `TaskCreate` and `TaskUpdate` tools. Codex sessions do not generate task events.
+</Aside>
+
+## Dashboard Display
+
+In the frontend, the task list appears in the run panel when tasks are present. Each task shows:
+
+- A status icon (pending, in progress, completed)
+- The task subject
+- The task description (if provided)
+
+This gives you a quick overview of the agent's plan and progress without reading through the full event history.

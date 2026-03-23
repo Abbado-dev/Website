@@ -1,0 +1,98 @@
+---
+title: Quick Start
+description: Create your first project, add a repo, launch an agent session, and review changes in 5 minutes.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+This guide walks you through the core workflow: project setup, agent creation, session launch, and code review.
+
+<Aside type="note">
+Make sure you have ia-ide running. See [Installation](/docs/installation/) if you haven't set it up yet.
+</Aside>
+
+<Steps>
+
+1. **Create a project**
+
+   Click **"+ New Project"** in the sidebar. Give it a name (e.g., "My App").
+
+   A project is a container for your repositories and agents.
+
+2. **Add a git repository**
+
+   On the project page, click the **"+"** button next to "Repositories". Enter a name and the absolute path to a local git repo:
+
+   ```
+   Name: backend
+   Path: /Users/you/projects/my-app
+   ```
+
+   The repo must have at least one commit. ia-ide validates that the path exists and contains a `.git` directory.
+
+3. **Create an agent**
+
+   Click **"+ Agent"** to open the agent template library. Pick a template:
+
+   - **Feature Builder** — for implementing new code
+   - **Bug Fixer** — for debugging and fixing issues
+   - **PR Reviewer** — for reviewing code changes (read-only)
+
+   Or create a custom agent by choosing a provider (Claude Code or Codex), setting instructions, and picking a role.
+
+4. **Launch a session**
+
+   Click **"+ Session"** on the agent card. ia-ide will:
+
+   - Create a git worktree (isolated branch) for this run
+   - Configure CLI hooks so the dashboard knows what the agent is doing
+   - Spawn the CLI (Claude or Codex) in a PTY terminal
+   - Open the interactive terminal in the sidebar
+
+   You are now in a live CLI session. Type your task or paste instructions.
+
+5. **Watch it work**
+
+   As the agent uses tools, the dashboard shows:
+
+   - **Status indicator** — queued, running, paused, completed
+   - **Activity feed** — tool calls (Read, Edit, Bash, etc.) in real-time
+   - **Terminal** — full interactive access to the CLI session
+
+   The session stays alive even if you close the browser tab. Reconnect anytime and the terminal output replays from a server-side buffer.
+
+6. **Review changes**
+
+   Once the agent finishes (status goes to "paused" or "completed"), click the **diff icon** to see what changed:
+
+   - File-by-file diff viewer with syntax highlighting
+   - Insertions and deletions count
+   - Old vs. new content side by side
+
+7. **Commit and push**
+
+   From the sidebar:
+
+   - **Commit** — stage and commit all changes with a custom message
+   - **Push** — push the run branch to the remote
+   - **Create PR/MR** — open a pull request on GitHub or merge request on GitLab
+
+   You can also rename the branch before pushing if the auto-generated name (`ia-ide/run-XXXX`) is not descriptive enough.
+
+</Steps>
+
+## What Just Happened
+
+Behind the scenes, ia-ide:
+
+1. Created a **git worktree** from your repo's HEAD, giving the agent an isolated branch (`ia-ide/run-XXXX`)
+2. Wrote a **hook script** that the CLI calls on every lifecycle event (tool use, stop, session end)
+3. Generated a **hooks configuration file** (`claude-hooks.json`) pointing all events to the hook script
+4. Spawned the CLI with `--settings` pointing to the hooks config
+5. Tracked all events via the hook endpoint and broadcast them to the frontend via SSE
+
+## Next Steps
+
+- Learn about [Projects & Repos](/docs/concepts/projects/) to understand multi-repo support
+- Explore [Agent Templates](/docs/concepts/agents/) to see all 14 built-in agents
+- Set up [Discord Notifications](/docs/features/notifications/) to get alerts

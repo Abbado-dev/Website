@@ -1,0 +1,161 @@
+---
+title: Multi-Provider Support
+description: Claude Code and Codex CLI support, provider detection, and how ia-ide handles different CLIs.
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Overview
+
+ia-ide supports multiple AI CLI providers. Each agent is configured with a specific provider, and ia-ide handles the differences in CLI flags, hook systems, and session management.
+
+## Supported Providers
+
+<Tabs>
+  <TabItem label="Claude Code">
+    | Property | Value |
+    |----------|-------|
+    | **Provider ID** | `claude-code` |
+    | **CLI binary** | `claude` |
+    | **Install** | `npm install -g @anthropic-ai/claude-code` |
+    | **Hook system** | `--settings` flag with JSON hooks config |
+    | **Default models** | Sonnet 4.6, Opus 4.6, Haiku 4.5 |
+
+    Claude Code is the primary provider. All hook events are fully supported: `UserPromptSubmit`, `Stop`, `StopFailure`, `SessionEnd`, `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `Notification`, `PermissionRequest`, `SubagentStart`, `SubagentStop`.
+  </TabItem>
+  <TabItem label="Codex">
+    | Property | Value |
+    |----------|-------|
+    | **Provider ID** | `codex` |
+    | **CLI binary** | `codex` |
+    | **Install** | `npm install -g @openai/codex` |
+    | **Hook system** | Custom hook installation via state directory |
+    | **Default models** | o3, o4-mini, GPT-4.1 |
+
+    Codex uses a different hook system. ia-ide installs hooks via `ia_ide_adapters::codex::install_run_hooks` and prepares credentials via `prepare_state_dir`. The hook response format includes a `hookSpecificOutput` wrapper.
+  </TabItem>
+</Tabs>
+
+## Provider Detection
+
+When you create an agent, you set the `cli_name` field to either `claude-code` or `codex`. ia-ide uses this to:
+
+1. **Select the adapter** — different launch logic for each CLI
+2. **Check availability** — verify the CLI binary is installed
+3. **Configure hooks** — each provider has its own hook setup
+4. **Set environment variables** — Codex needs specific env vars for credentials
+
+### CLI Availability Check
+
+Before launching a run, ia-ide checks that the CLI is installed:
+
+```
+which claude    # for claude-code
+which codex     # for codex
+```
+
+If the CLI is not found, the run fails with an error message and install instructions.
+
+## Adapter Architecture
+
+Each provider has an adapter that implements the same interface:
+
+```rust
+pub trait Adapter {
+    fn is_cli_available(&self) -> bool;
+    async fn launch(self, config: LaunchConfig, tx: Sender<RunEvent>) -> Result<()>;
+}
+```
+
+The `LaunchConfig` includes:
+
+- `run_id` — unique run identifier
+- `worktrees` — list of `(repo_name, worktree_path)` pairs
+- `task` — the prompt text
+- `state_dir` — directory for CLI session state
+- `session_id` — for resume (optional)
+- `allowed_tools` — comma-separated tool names
+- `instructions` — system prompt to append
+
+## Hook Differences
+
+### Claude Code
+
+Hooks are configured via a JSON settings file passed with `--settings`:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "/path/to/hook.sh" }] }]
+  }
+}
+```
+
+Agent instructions are passed via `--append-system-prompt`.
+
+### Codex
+
+Hooks are installed into the Codex state directory. The hook responses need a specific format:
+
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "SessionStart",
+    "additionalContext": ""
+  }
+}
+```
+
+Codex also requires credential preparation and specific environment variables for authentication.
+
+## Model Configuration
+
+The available models per provider are configurable via **Settings > Models** in the UI, or the API:
+
+```
+GET /api/settings/models
+PUT /api/settings/models
+```
+
+Default configuration:
+
+```json
+{
+  "providers": [
+    {
+      "id": "claude-code",
+      "name": "Claude",
+      "models": [
+        { "id": "claude-sonnet-4-6", "name": "Sonnet 4.6", "description": "Fast, balanced" },
+        { "id": "claude-opus-4-6", "name": "Opus 4.6", "description": "Most capable" },
+        { "id": "claude-haiku-4-5", "name": "Haiku 4.5", "description": "Fastest, cheapest" }
+      ]
+    },
+    {
+      "id": "codex",
+      "name": "ChatGPT",
+      "models": [
+        { "id": "o3", "name": "o3", "description": "Reasoning" },
+        { "id": "o4-mini", "name": "o4-mini", "description": "Fast reasoning" },
+        { "id": "gpt-4.1", "name": "GPT-4.1", "description": "Flagship" }
+      ]
+    }
+  ]
+}
+```
+
+You can add custom providers or modify the model list. The model list is stored in the settings table and survives server restarts.
+
+<Aside type="note">
+The `model` field on an agent is optional. When unset, the CLI uses its default model (determined by your CLI credentials and environment). Setting a model here overrides the CLI default.
+</Aside>
+
+## Pipeline Mode
+
+In pipeline mode (when a run has a `parent_run_id`), ia-ide uses the **stream-json adapter** instead of the PTY terminal. This mode:
+
+- Launches the CLI with `-p` (prompt mode) for non-interactive execution
+- Parses the JSON output stream for events
+- Automatically transitions through the builder/reviewer pipeline
+
+Interactive mode (no parent run) always uses the PTY terminal with hooks.

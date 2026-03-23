@@ -1,0 +1,102 @@
+---
+title: Projects & Repos
+description: How ia-ide organizes work around projects and repositories, with multi-repo support and isolated worktrees.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Projects
+
+A **project** is the top-level organizational unit in ia-ide. It groups together:
+
+- One or more **git repositories**
+- **Agents** configured to work on those repos
+- **Runs** (session history) for each agent
+
+Projects are stored in the SQLite database with a UUID, name, and timestamps.
+
+### Creating a Project
+
+From the dashboard sidebar, click **"+ New Project"** and enter a name. The project appears in the sidebar immediately.
+
+### Deleting a Project
+
+Deleting a project removes the project record and its associated agents from the database. Existing run data and worktrees are preserved on disk.
+
+## Repositories
+
+Each project can have **one or more git repositories** linked to it. This enables multi-repo workflows — for example, a frontend repo and a backend repo in the same project.
+
+### Adding a Repository
+
+When adding a repo, you provide:
+
+- **Name** — a display label (e.g., "backend", "frontend")
+- **Path** — the absolute filesystem path to the git repository
+
+ia-ide validates that:
+1. The path exists
+2. The path contains a `.git` directory (i.e., it's a git repo)
+
+```
+Name: api
+Path: /Users/you/projects/my-app-api
+```
+
+### Multi-Repo Support
+
+When a project has multiple repos, each run creates **separate worktrees** for each repo. The branch naming convention includes the repo name as a suffix:
+
+```
+ia-ide/run-a1b2c3d4-api       # worktree for the "api" repo
+ia-ide/run-a1b2c3d4-frontend  # worktree for the "frontend" repo
+```
+
+Each worktree is an isolated git branch created from the repo's HEAD at run time. Agents work inside these worktrees, so the original repo's working directory is never modified.
+
+## Worktrees
+
+Every run creates a git worktree for each repo in the project. Worktrees live in the data directory:
+
+```
+$IA_IDE_DATA_DIR/runs/<run-id>/worktree/<repo-name>/
+```
+
+For example:
+
+```
+./data/runs/a1b2c3d4-5678-9abc-def0-123456789abc/worktree/api/
+./data/runs/a1b2c3d4-5678-9abc-def0-123456789abc/worktree/frontend/
+```
+
+### Why Worktrees?
+
+Git worktrees allow multiple branches to be checked out simultaneously from the same repository. This means:
+
+- **No conflicts** between parallel agent sessions on the same repo
+- The **original repo stays clean** — agents never touch your working directory
+- Each session has a **dedicated branch** that can be pushed, merged, or deleted independently
+
+### Worktree Lifecycle
+
+1. **Created** when a run starts (`git worktree add -b <branch> <path> <base-commit>`)
+2. **Used** by the agent throughout the session — all file reads/writes happen here
+3. **Preserved** after the run completes — you can review changes at any time
+4. **Cleaned up** when you delete the run (worktree removed, branch deleted)
+
+<Aside type="tip">
+If you see "worktree not found" errors, make sure the repo has at least one commit. ia-ide needs a base commit to create the worktree from.
+</Aside>
+
+## API
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/projects` | `POST` | Create a project |
+| `/api/projects` | `GET` | List all projects |
+| `/api/projects/{id}` | `GET` | Get a project (with repos) |
+| `/api/projects/{id}` | `DELETE` | Delete a project |
+| `/api/projects/{id}/repos` | `POST` | Add a repo to a project |
+| `/api/projects/{project_id}/repos/{repo_id}` | `DELETE` | Remove a repo |
+
+See the full [API Reference](/docs/reference/api/) for request/response details.

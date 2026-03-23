@@ -1,0 +1,138 @@
+---
+title: Agents & Templates
+description: Agent configuration, built-in templates, roles, custom agents, and provider/model selection.
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## What is an Agent?
+
+An **agent** is a reusable configuration for running an AI CLI on a project. It defines:
+
+- **CLI provider** — Claude Code or Codex
+- **Role** — builder (writes code) or reviewer (reviews code)
+- **Instructions** — system prompt appended to the CLI session
+- **Model** — which model to use (optional, uses CLI default if unset)
+- **Allowed tools** — which tools the agent can use (Read, Edit, Write, Bash, Glob, Grep)
+- **Max turns** — maximum number of turns per session
+
+Agents belong to a project. You can have multiple agents on the same project (e.g., a builder and a reviewer).
+
+## Roles
+
+### Builder
+
+A **builder** agent writes code. When it finishes, ia-ide can:
+
+- Auto-commit changes
+- Push the branch
+- Trigger a reviewer agent (pipeline mode)
+
+Builder agents typically have full tool access: `Read`, `Edit`, `Write`, `Bash`, `Glob`, `Grep`.
+
+### Reviewer
+
+A **reviewer** agent reviews code changes. It typically has read-only tool access: `Read`, `Grep`, `Glob`.
+
+In pipeline mode, a reviewer agent launches automatically after a builder completes. The reviewer reads the diff and outputs either `APPROVED` or `CHANGES_REQUESTED`. If changes are requested, the builder relaunches with the feedback (up to 3 iterations).
+
+## Agent Templates
+
+ia-ide ships with 14 preconfigured agent templates across 6 categories:
+
+### Review
+| Template | Description | Tools |
+|----------|-------------|-------|
+| **PR Reviewer** | Reviews code changes, identifies bugs, suggests improvements | Read, Grep, Glob |
+| **Architecture Reviewer** | Reviews code structure, dependencies, architectural decisions | Read, Grep, Glob |
+
+### Coding
+| Template | Description | Tools |
+|----------|-------------|-------|
+| **Bug Fixer** | Analyzes bugs, finds root cause, implements fix with tests | Read, Edit, Write, Bash, Grep, Glob |
+| **Feature Builder** | Implements new features end-to-end: code, tests, and docs | Read, Edit, Write, Bash, Grep, Glob |
+| **Refactorer** | Refactors code for clarity without changing behavior | Read, Edit, Write, Bash, Grep, Glob |
+
+### Testing
+| Template | Description | Tools |
+|----------|-------------|-------|
+| **Test Writer** | Writes missing tests to improve coverage | Read, Write, Bash, Grep, Glob |
+| **E2E Test Writer** | Writes end-to-end tests for user-facing flows | Read, Write, Bash, Grep, Glob |
+
+### Documentation
+| Template | Description | Tools |
+|----------|-------------|-------|
+| **Documentation Writer** | Writes and updates README, API docs, inline comments | Read, Write, Glob, Grep |
+| **API Documenter** | Documents API endpoints with request/response examples | Read, Write, Grep, Glob |
+
+### DevOps
+| Template | Description | Tools |
+|----------|-------------|-------|
+| **CI/CD Setup** | Sets up or improves CI/CD pipelines | Read, Write, Edit, Bash, Grep, Glob |
+| **Dockerfile Optimizer** | Optimizes Docker images for size and build speed | Read, Edit, Write, Bash, Glob |
+
+### Security
+| Template | Description | Tools |
+|----------|-------------|-------|
+| **Security Auditor** | Audits code for OWASP vulnerabilities (read-only) | Read, Grep, Glob |
+| **Dependency Checker** | Checks for outdated or vulnerable dependencies | Read, Bash, Grep, Glob |
+
+## Custom Agents
+
+You can create agents from scratch instead of using templates. When creating a custom agent, configure:
+
+```json
+{
+  "project_id": "<uuid>",
+  "name": "My Custom Agent",
+  "cli_name": "claude-code",
+  "model": "claude-sonnet-4-6",
+  "instructions": "You are a specialist in...",
+  "allowed_tools": "Read,Edit,Write,Bash,Glob,Grep",
+  "max_turns": 100,
+  "role": "builder"
+}
+```
+
+### Instructions
+
+The `instructions` field is appended to the CLI session as a system prompt via `--append-system-prompt`. Use it to give the agent context about the project, coding standards, or specific constraints.
+
+### Provider Config
+
+The `provider_config` field stores provider-specific configuration as JSON. This is a flexible field for future use — currently it's an empty object `{}`.
+
+## Provider & Model Selection
+
+Each agent specifies a CLI provider:
+
+<Tabs>
+  <TabItem label="Claude Code">
+    - Provider ID: `claude-code`
+    - Default models: Sonnet 4.6, Opus 4.6, Haiku 4.5
+    - CLI: `claude`
+  </TabItem>
+  <TabItem label="Codex">
+    - Provider ID: `codex`
+    - Default models: o3, o4-mini, GPT-4.1
+    - CLI: `codex`
+  </TabItem>
+</Tabs>
+
+The model list is configurable via **Settings > Models** in the UI, or the `PUT /api/settings/models` endpoint. You can add custom providers and models.
+
+<Aside type="note">
+The `model` field on an agent is optional. If unset, the CLI uses whatever model is configured in your CLI credentials or environment.
+</Aside>
+
+## API
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/agents` | `POST` | Create an agent |
+| `/api/agents/{id}` | `GET` | Get an agent |
+| `/api/agents/{id}` | `PUT` | Update an agent |
+| `/api/agents/{id}` | `DELETE` | Delete an agent |
+| `/api/projects/{project_id}/agents` | `GET` | List agents for a project |
+
+See the full [API Reference](/docs/reference/api/) for request/response details.

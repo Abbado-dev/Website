@@ -1,0 +1,70 @@
+---
+title: Introduction
+description: What ia-ide is, who it's for, and an overview of its key features.
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+**ia-ide** is a personal, self-hosted AI coding agent orchestrator. It gives you a single dashboard to launch, monitor, and manage multiple AI coding agents across your projects.
+
+You provide the CLI tools (Claude Code, Codex). ia-ide provides the infrastructure: terminal sessions, git workflows, real-time event tracking, notifications, and a web UI to tie it all together.
+
+## Who is it for?
+
+ia-ide is built for developers who:
+
+- Already use Claude Code or Codex CLI in their terminal
+- Want to run multiple agents in parallel without juggling terminals
+- Need visibility into what agents are doing across repos
+- Want a git workflow (diff, commit, push, PR) integrated with agent output
+
+## Key Features
+
+<CardGrid>
+  <Card title="Interactive Terminal" icon="seti:shell">
+    Real Claude/Codex CLI sessions in your browser via xterm.js and portable-pty. Sessions persist server-side — close the browser tab, reconnect later, output is still there.
+  </Card>
+  <Card title="Multi-Agent Orchestration" icon="rocket">
+    Run multiple agents simultaneously on the same project. Each agent session gets its own git worktree, so there are no file conflicts between parallel sessions.
+  </Card>
+  <Card title="CLI Hooks Integration" icon="puzzle">
+    ia-ide hooks into Claude Code and Codex lifecycle events (tool use, stop, notifications, session end). This gives the dashboard real-time awareness of what the agent is doing — without parsing terminal output.
+  </Card>
+  <Card title="Git Workflow" icon="github">
+    View diffs, commit changes, rename branches, push to remote, and create pull requests or merge requests — all from the UI. Supports both GitHub and GitLab.
+  </Card>
+  <Card title="Discord Notifications" icon="discord">
+    Get notified when agents finish, fail, or need your attention. Per-session toggle so you only get alerts for the runs you care about.
+  </Card>
+  <Card title="Agent Templates" icon="document">
+    14 preconfigured agent templates: PR Reviewer, Bug Fixer, Feature Builder, Test Writer, Security Auditor, and more. Or create your own with custom instructions.
+  </Card>
+</CardGrid>
+
+## Architecture at a Glance
+
+| Layer | Technology |
+|-------|-----------|
+| **Backend** | Rust (axum, tokio, sqlx, SQLite) |
+| **Frontend** | React 19, Vite, TypeScript, TanStack Query, Zustand |
+| **Terminal** | xterm.js + portable-pty over WebSocket |
+| **Execution** | Local processes with CLI hooks — no Docker required |
+| **Git providers** | GitHub (`gh`) and GitLab (`glab`) |
+| **Notifications** | Discord webhooks |
+
+Agents run as local processes using your existing CLI credentials and API keys. ia-ide does not proxy API calls or store your keys.
+
+## How It Works
+
+1. **Create a project** and add one or more git repositories
+2. **Create an agent** from the template library or configure a custom one
+3. **Launch a session** — ia-ide spawns the CLI in a PTY with hooks configured
+4. **Interact in the terminal** — the agent works, you supervise and guide
+5. **Review changes** — view diffs, commit, push, create a PR
+6. **Get notified** on Discord when the session completes or needs attention
+
+## Next Steps
+
+- [Install ia-ide](/docs/installation/) to get the backend and frontend running
+- [Quick Start](/docs/quickstart/) for a 5-minute walkthrough
+- [Core Concepts](/docs/concepts/projects/) to understand the data model

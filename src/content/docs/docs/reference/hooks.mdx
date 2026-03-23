@@ -1,0 +1,304 @@
+---
+title: CLI Hooks Reference
+description: Complete reference for all hook events ia-ide handles, what they do, and the hook script format.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Hook Endpoint
+
+```
+POST /api/runs/{id}/hook
+```
+
+All hook events are sent to this single endpoint. The hook event name is extracted from the payload:
+
+```json
+{ "hook_event_name": "PreToolUse", ... }
+```
+
+ia-ide checks for the event name in these fields (in order): `hook_event_name`, `event_name`, `hookEventName`.
+
+## Hook Script
+
+Each run gets a hook script at `$IA_IDE_DATA_DIR/runs/<run-id>/hook.sh`:
+
+```bash
+#!/bin/bash
+RESPONSE=$(curl -s -X POST "http://127.0.0.1:3000/api/runs/<run-id>/hook" \
+  -H "Content-Type: application/json" -d @- 2>/dev/null)
+echo "$RESPONSE"
+```
+
+The script:
+1. Reads the hook payload from stdin (JSON, provided by the CLI)
+2. POSTs it to the ia-ide hook endpoint
+3. Echoes the response back to the CLI
+
+## Hook Configuration
+
+The hooks config file at `$IA_IDE_DATA_DIR/runs/<run-id>/claude-hooks.json` maps all events to the hook script. It is passed to Claude Code via `--settings`.
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      { "hooks": [{ "type": "command", "command": "/path/to/hook.sh" }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "/path/to/hook.sh" }] }
+    ],
+    "StopFailure": [
+      { "hooks": [{ "type": "command", "command": "/path/to/hook.sh" }] }
+    ],
+    "SessionEnd": [
+      { "hooks": [{ "type": "command", "command": "/path/to/hook.sh" }] }
+    ],
+    "PreToolUse": [
+      { "matcher": "*", "hooks": [{ "type": "command", "command": "/path/to/hook.sh" }] }
+    ],
+    "PostToolUse": [
+      { "matcher": "*", "hooks": [{ "type": "command", "command": "/path/to/hook.sh" }] }
+    ],
+    "PostToolUseFailure": [
+      { "matcher": "*", "hooks": [{ "type": "command", "command": "/path/to/hook.sh" }] }
+    ],
+    "Notification": [
+      { "hooks": [{ "type": "command", "command": "/path/to/hook.sh" }] }
+    ],
+    "PermissionRequest": [
+      { "matcher": "*", "hooks": [{ "type": "command", "command": "/path/to/hook.sh" }] }
+    ],
+    "SubagentStart": [
+      { "matcher": "*", "hooks": [{ "type": "command", "command": "/path/to/hook.sh" }] }
+    ],
+    "SubagentStop": [
+      { "matcher": "*", "hooks": [{ "type": "command", "command": "/path/to/hook.sh" }] }
+    ]
+  }
+}
+```
+
+Tool-related events use `"matcher": "*"` to match all tool names. Non-tool events omit the matcher.
+
+---
+
+## Event Reference
+
+### UserPromptSubmit
+
+**When**: User sends a prompt to the agent (types a message and presses Enter).
+
+**Payload fields**: Standard Claude Code hook payload.
+
+**ia-ide behavior**:
+- If the run status is not already `running`, marks it as `running`
+- This is how ia-ide transitions from `queued` or `paused` to `running`
+
+**Response**: `{}`
+
+---
+
+### Stop
+
+**When**: Agent finishes responding to a prompt.
+
+**Payload fields**:
+- `last_assistant_message` (string) — the agent's last response text
+
+**ia-ide behavior**:
+- Marks the run as `paused` (idle but session still alive)
+- If the run has `notify: true`, sends a Discord notification with the last message summary
+
+**Response**: `{}`
+
+---
+
+### StopFailure
+
+**When**: Agent encounters an error while processing.
+
+**Payload fields**:
+- `error` (string) — error message
+
+**ia-ide behavior**:
+- Marks the run as `failed`
+- Sends a Discord notification with the error (uses `notify_on_run_failed` setting)
+
+**Response**: `{}`
+
+---
+
+### SessionEnd
+
+**When**: User quits the CLI or the session terminates.
+
+**ia-ide behavior**:
+- If the run is `running` or `paused`, marks it as `completed`
+- If the run has `notify: true`, sends a Discord notification
+
+**Response**: `{}`
+
+---
+
+### PreToolUse
+
+**When**: Agent is about to invoke a tool.
+
+**Payload fields**:
+- `tool_name` (string) — name of the tool (e.g., "Read", "Edit", "Bash")
+- `tool_input` (object) — tool input parameters
+
+**ia-ide behavior**:
+- Persists an `agent.tool_call` event with `{ "tool": "<name>", "input": <input> }`
+- This powers the real-time activity feed in the dashboard
+
+**Response**: `{}`
+
+---
+
+### PostToolUse
+
+**When**: A tool call completed successfully.
+
+**Payload fields**:
+- `tool_name` (string) — name of the tool
+- `tool_response` (object) — tool output
+
+**ia-ide behavior**:
+- Persists an `agent.tool_result` event with `{ "tool": "<name>", "output": <response> }`
+
+**Response**: `{}`
+
+---
+
+### PostToolUseFailure
+
+**When**: A tool call failed with an error.
+
+**Payload fields**:
+- `tool_name` (string) — name of the tool
+- `error` (string) — error message
+
+**ia-ide behavior**:
+- Persists an `agent.tool_result` event with `{ "tool": "<name>", "error": "<message>" }`
+
+**Response**: `{}`
+
+---
+
+### Notification
+
+**When**: Claude Code emits a notification (permission prompt, idle prompt, etc.).
+
+**Payload fields**:
+- `notification_type` (string) — type of notification (e.g., `"permission_prompt"`, `"idle_prompt"`)
+- `message` (string) — notification message
+
+**ia-ide behavior**:
+- For `permission_prompt` and `idle_prompt` types:
+  - Persists an `agent.needs_attention` event
+  - Sends a Discord notification
+- Other notification types are acknowledged but not persisted
+
+**Response**: `{}`
+
+---
+
+### PermissionRequest
+
+**When**: Agent requests permission to perform an action.
+
+**Payload fields**:
+- Standard Claude Code permission request payload
+
+**ia-ide behavior**:
+- Does nothing — returns an empty response
+- The user handles permissions directly in the terminal
+
+**Response**: `{}`
+
+<Aside type="note">
+ia-ide intentionally does not auto-approve permissions. The interactive terminal lets the user review and approve/deny each request manually.
+</Aside>
+
+---
+
+### SubagentStart
+
+**When**: Agent spawns a subagent.
+
+**Payload fields**:
+- `agent_type` (string) — type of the subagent
+
+**ia-ide behavior**:
+- Persists an `agent.subagent_start` event
+
+**Response**: `{}`
+
+---
+
+### SubagentStop
+
+**When**: A subagent stops.
+
+**Payload fields**:
+- `agent_type` (string) — type of the subagent
+
+**ia-ide behavior**:
+- Persists an `agent.subagent_stop` event
+
+**Response**: `{}`
+
+---
+
+## Codex Hook Response Format
+
+For Codex CLI hooks, the response format wraps the event name:
+
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "SessionStart",
+    "additionalContext": ""
+  }
+}
+```
+
+This format is only used for the `SessionStart` event. All other Codex events use the standard `{}` response.
+
+## Persisted Events
+
+All hook-generated events follow this schema in the database:
+
+```json
+{
+  "id": 42,
+  "run_id": "uuid",
+  "sequence": 5,
+  "event_type": "agent.tool_call",
+  "event_version": 1,
+  "payload": { "tool": "Edit", "input": { "file": "main.rs" } },
+  "created_at": "2025-01-01T12:00:00Z"
+}
+```
+
+Events are immutable once written. The `sequence` field is monotonically increasing per run.
+
+## Debugging Hooks
+
+To verify hooks are working:
+
+1. Start a run and open the terminal
+2. Watch the backend logs for `hook received` messages:
+   ```
+   INFO ia_ide_api::runs: hook received run_id=a1b2c3d4 event=UserPromptSubmit
+   INFO ia_ide_api::runs: hook received run_id=a1b2c3d4 event=PreToolUse
+   ```
+3. Check the events API: `GET /api/runs/{id}/events`
+4. Verify the hook script is executable: `ls -la $IA_IDE_DATA_DIR/runs/<run-id>/hook.sh`
+
+If hooks are not firing, check:
+- The hook script has execute permissions (`chmod 755`)
+- The server is running on the expected port
+- The `--settings` flag is being passed to the CLI

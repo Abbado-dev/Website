@@ -1,0 +1,207 @@
+---
+title: Git Workflow
+description: Diff viewer, commit, branch rename, push, and PR/MR creation for GitHub and GitLab.
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Overview
+
+ia-ide provides a complete git workflow from the dashboard. After an agent makes changes, you can review, commit, push, and create pull requests without leaving the UI.
+
+Every agent session works on an isolated **git worktree** with its own branch (e.g., `ia-ide/run-a1b2c3d4`). This means the original repo is never modified, and multiple agents can work in parallel without conflicts.
+
+## Diff Viewer
+
+View all changes made by a run:
+
+```
+GET /api/runs/{id}/changes
+```
+
+The diff viewer shows:
+
+- **File list** with status (added, modified, deleted, renamed)
+- **Unified diff** for each file
+- **Old and new content** for side-by-side comparison
+- **Diff stats** (files changed, insertions, deletions)
+
+Changes are computed by comparing the worktree against the base commit (`git diff <base-commit>`).
+
+### Quick Diff Stats
+
+For a lightweight summary without full file contents:
+
+```
+GET /api/runs/{id}/diff-stats
+```
+
+Returns just the counts:
+
+```json
+{
+  "files_changed": 5,
+  "insertions": 120,
+  "deletions": 30
+}
+```
+
+## Committing Changes
+
+Commit all uncommitted changes in the run's worktrees:
+
+```
+POST /api/runs/{id}/commit
+```
+
+```json
+{
+  "message": "feat: add user authentication"
+}
+```
+
+ia-ide stages all changes (`git add -A`), commits with the provided message, and returns the commit hash. Commits are authored as `ia-ide <ia-ide@localhost>`.
+
+If there are no uncommitted changes, the endpoint returns a 400 error.
+
+## Branch Rename
+
+Rename the run's branch to something more descriptive:
+
+```
+POST /api/runs/{id}/rename-branch
+```
+
+```json
+{
+  "name": "feat/user-auth"
+}
+```
+
+This renames the branch in all worktrees and updates the database. Branch name validation rejects invalid git branch names (spaces, `..`, `~`, `^`, etc.).
+
+## Push to Remote
+
+Push the run's branch to the origin remote:
+
+```
+POST /api/runs/{id}/push
+```
+
+For each repo in the project, ia-ide pushes the run branch with `git push origin <branch>`. The endpoint returns the push results:
+
+```json
+[
+  {
+    "repo_name": "api",
+    "branch": "feat/user-auth-api",
+    "remote_url": "git@github.com:user/api.git"
+  }
+]
+```
+
+<Aside type="note">
+Push requires that the repo has a remote named `origin`. If no remote is configured, ia-ide returns an error with instructions to add one.
+</Aside>
+
+## Create Pull Request / Merge Request
+
+Create a PR (GitHub) or MR (GitLab):
+
+```
+POST /api/runs/{id}/pull-request
+```
+
+```json
+{
+  "title": "feat: add user authentication",
+  "body": "Implements login/signup flow with JWT tokens."
+}
+```
+
+ia-ide:
+
+1. Pushes the branch first (if not already pushed)
+2. Detects the git provider from the remote URL
+3. Creates the PR/MR using the appropriate CLI
+
+<Tabs>
+  <TabItem label="GitHub">
+    Uses `gh pr create` — requires [GitHub CLI](https://cli.github.com/) to be installed and authenticated.
+  </TabItem>
+  <TabItem label="GitLab">
+    Uses `glab mr create` — requires [GitLab CLI](https://gitlab.com/gitlab-org/cli) to be installed and authenticated.
+  </TabItem>
+</Tabs>
+
+The response includes the PR URL and number for each repo:
+
+```json
+[
+  {
+    "repo_name": "api",
+    "pr_url": "https://github.com/user/api/pull/42",
+    "pr_number": 42
+  }
+]
+```
+
+## Branch Management
+
+### List Branches
+
+View all branches across all repos in a project:
+
+```
+GET /api/projects/{id}/branches
+```
+
+Each branch includes:
+
+- **Ahead/behind counts** relative to the default branch (main/master)
+- **Run association** — which run created this branch (if any)
+- **Uncommitted changes** — file count, insertions, deletions
+- **Push status** — whether the branch exists on the remote
+- **PR info** — URL, number, and state (via a separate lazy endpoint)
+
+### Delete a Branch
+
+```
+DELETE /api/projects/{id}/branches?branch=<name>&repo_id=<uuid>
+```
+
+Removes the worktree (if present) and deletes the branch. Refuses to delete `main` or `master`.
+
+### Merge a Branch
+
+```
+POST /api/projects/{id}/branches/merge?branch=<name>&repo_id=<uuid>
+```
+
+Performs `git merge --no-ff <branch>` into the default branch. On conflict, aborts the merge and returns the conflict details.
+
+### Rebase a Branch
+
+```
+POST /api/projects/{id}/branches/rebase?branch=<name>&repo_id=<uuid>
+```
+
+Rebases the branch onto the default branch. On conflict, aborts the rebase and returns the error.
+
+### PR Status
+
+Fetch PR/MR info for all pushed branches (lazy endpoint — makes network calls):
+
+```
+GET /api/projects/{id}/branches/pr-status
+```
+
+## Revert Changes
+
+Discard all changes in a run's worktree:
+
+```
+POST /api/runs/{id}/revert
+```
+
+Performs `git reset --hard <base-commit>` in each worktree, reverting to the state before the agent started.

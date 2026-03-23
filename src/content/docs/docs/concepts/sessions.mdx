@@ -1,0 +1,158 @@
+---
+title: Sessions & Terminal
+description: How ia-ide manages terminal sessions with PTY, session lifecycle, server-side persistence, and WebSocket reconnection.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## What is a Session?
+
+A **session** (called a "run" in the data model) represents a single agent execution. Each session includes:
+
+- A **PTY terminal** running the CLI (Claude or Codex) in a real pseudo-terminal
+- A **git worktree** with an isolated branch for the agent to work in
+- An **event stream** tracking tool calls, status changes, and notifications
+- **Hooks** that report agent activity back to ia-ide in real-time
+
+## Terminal Architecture
+
+ia-ide uses **xterm.js** in the browser connected to a **portable-pty** process on the server via WebSocket.
+
+```
+Browser (xterm.js) ←→ WebSocket ←→ PTY (portable-pty) ←→ CLI (claude/codex)
+```
+
+This gives you a real terminal experience: colors, cursor movement, copy/paste, resize — everything works exactly like a local terminal.
+
+### Key Properties
+
+- **Server-side PTY** — the CLI process runs on the server, not in the browser
+- **Output buffering** — the server keeps a 100KB rolling buffer of terminal output
+- **Reconnect replay** — when you reconnect, the buffer is replayed so you see recent output
+- **Session survival** — closing the browser tab does NOT kill the CLI process; the PTY keeps running
+
+## Session Lifecycle
+
+Every session goes through these states:
+
+```
+queued → running → paused → running → paused → ... → completed
+                     ↑                                    |
+                     └────────────────────────────────────┘
+                              (continue)
+```
+
+### States
+
+| Status | Meaning |
+|--------|---------|
+| **queued** | Run created, PTY spawned, waiting for the user to type a prompt |
+| **running** | Agent is actively processing (triggered by `UserPromptSubmit` hook) |
+| **paused** | Agent finished responding, session still alive, waiting for next prompt (triggered by `Stop` hook) |
+| **completed** | Session ended — user quit the CLI or session terminated (triggered by `SessionEnd` hook or PTY exit) |
+| **failed** | Agent encountered an error (triggered by `StopFailure` hook) |
+| **cancelled** | User explicitly cancelled the run via the UI |
+
+<Aside type="note">
+The running/paused cycle is what makes interactive sessions work. Each time the agent finishes a response, the session goes to "paused". When you type another prompt, it goes back to "running". This is tracked via hooks, not terminal output parsing.
+</Aside>
+
+### State Transitions
+
+State transitions happen through two mechanisms:
+
+1. **Hooks** — the CLI calls ia-ide's hook endpoint on lifecycle events (most transitions)
+2. **PTY exit** — when the CLI process exits, ia-ide marks active runs as completed (fallback)
+
+## WebSocket Connection
+
+The terminal WebSocket endpoint is `GET /api/terminal?run_id=<uuid>`.
+
+### Connection Flow
+
+1. Client opens WebSocket to `/api/terminal?run_id=<run-id>`
+2. Server looks up the PTY session for this run
+3. If no session exists and the run is active, server spawns a new PTY
+4. Server replays the output buffer (up to 100KB)
+5. Server subscribes the WebSocket to the PTY output broadcast channel
+6. Client sends keystrokes → server writes to PTY stdin
+7. PTY stdout → broadcast → all connected WebSockets
+
+### Multiple Viewers
+
+Multiple browser tabs can connect to the same session simultaneously. All viewers see the same output in real-time via a broadcast channel. Any viewer can send input.
+
+### Terminal Resize
+
+The client sends resize events as escape sequences:
+
+```
+\x1b[RESIZE:<cols>:<rows>
+```
+
+The server intercepts these and resizes the PTY accordingly. Default size is 120 columns by 30 rows.
+
+### Disconnection
+
+When a WebSocket disconnects:
+
+- The PTY process **keeps running**
+- The output buffer **keeps accumulating**
+- Other viewers (if any) are **unaffected**
+- Reconnecting replays the buffer and resumes live output
+
+## Session Data
+
+Each session stores data in the filesystem:
+
+```
+$IA_IDE_DATA_DIR/runs/<run-id>/
+├── worktree/<repo-name>/     # Git worktree (isolated branch)
+├── cli-state/                # CLI session state (for resume)
+├── hook.sh                   # Hook script that calls ia-ide
+└── claude-hooks.json         # Hook configuration for the CLI
+```
+
+### Events
+
+All session events are persisted in the SQLite database and available via:
+
+- **REST API**: `GET /api/runs/{id}/events`
+- **SSE stream**: `GET /api/runs/{id}/events/stream?last_event_id=0`
+
+The SSE stream replays missed events and then switches to live streaming — no events are lost between replay and live.
+
+## Pausing and Resuming
+
+### Pause
+
+Pausing a run (via the UI or `POST /api/runs/{id}/pause`):
+
+1. Kills the CLI process
+2. Commits any uncommitted changes as a checkpoint
+3. Marks the run as "paused"
+
+### Continue
+
+Continuing a completed/paused/failed run (via `POST /api/runs/{id}/continue`):
+
+1. Re-creates the worktree if needed
+2. Launches the CLI with the session ID for resume
+3. Sends the continuation message as the initial prompt
+4. Marks the run as "running"
+
+<Aside type="tip">
+The `continue` endpoint requires a `session_id` on the run. This is captured from the `SessionInit` hook event when the CLI first starts.
+</Aside>
+
+## API
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/terminal` | `GET` (WebSocket) | Connect to a terminal session |
+| `/api/runs/{id}` | `GET` | Get run status and metadata |
+| `/api/runs/{id}/events` | `GET` | Get all events for a run |
+| `/api/runs/{id}/events/stream` | `GET` (SSE) | Stream events in real-time |
+| `/api/runs/{id}/cancel` | `POST` | Cancel a running session |
+| `/api/runs/{id}/pause` | `POST` | Pause a running session |
+| `/api/runs/{id}/continue` | `POST` | Resume a completed/paused session |

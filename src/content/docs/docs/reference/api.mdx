@@ -1,0 +1,539 @@
+---
+title: API Reference
+description: Complete REST API reference for ia-ide — projects, agents, runs, events, changes, branches, settings, and WebSocket terminal.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+All endpoints are prefixed with `/api/`. The server runs on `http://127.0.0.1:3000` by default.
+
+Responses are JSON. Errors return a status code with a plain text message.
+
+## Projects
+
+### Create Project
+
+```
+POST /api/projects
+```
+
+```json
+{ "name": "My Project" }
+```
+
+**Response** (201):
+
+```json
+{
+  "id": "uuid",
+  "name": "My Project",
+  "repos": [],
+  "created_at": "2025-01-01T00:00:00Z"
+}
+```
+
+### List Projects
+
+```
+GET /api/projects
+```
+
+**Response** (200): Array of project objects (with repos).
+
+### Get Project
+
+```
+GET /api/projects/{id}
+```
+
+**Response** (200): Project object with repos.
+
+### Delete Project
+
+```
+DELETE /api/projects/{id}
+```
+
+**Response** (204): No content.
+
+### Add Repo
+
+```
+POST /api/projects/{id}/repos
+```
+
+```json
+{
+  "name": "backend",
+  "repo_path": "/absolute/path/to/repo"
+}
+```
+
+The path must exist and contain a `.git` directory.
+
+**Response** (201):
+
+```json
+{
+  "id": "uuid",
+  "name": "backend",
+  "repo_path": "/absolute/path/to/repo"
+}
+```
+
+### Remove Repo
+
+```
+DELETE /api/projects/{project_id}/repos/{repo_id}
+```
+
+**Response** (204): No content.
+
+---
+
+## Agents
+
+### Create Agent
+
+```
+POST /api/agents
+```
+
+```json
+{
+  "project_id": "uuid",
+  "name": "Feature Builder",
+  "cli_name": "claude-code",
+  "model": "claude-sonnet-4-6",
+  "instructions": "You are a senior developer...",
+  "allowed_tools": "Read,Edit,Write,Bash,Glob,Grep",
+  "max_turns": 100,
+  "provider_config": {},
+  "role": "builder"
+}
+```
+
+All fields except `project_id` and `name` have defaults:
+
+| Field | Default |
+|-------|---------|
+| `cli_name` | `"claude-code"` |
+| `allowed_tools` | `"Read,Edit,Write,Bash,Glob,Grep"` |
+| `max_turns` | `100` |
+| `provider_config` | `{}` |
+| `role` | `"builder"` |
+
+**Response** (201): Agent object.
+
+### Get Agent
+
+```
+GET /api/agents/{id}
+```
+
+**Response** (200): Agent object.
+
+### Update Agent
+
+```
+PUT /api/agents/{id}
+```
+
+Partial update — only include fields you want to change:
+
+```json
+{
+  "name": "Renamed Agent",
+  "max_turns": 50
+}
+```
+
+**Response** (200): Updated agent object.
+
+### Delete Agent
+
+```
+DELETE /api/agents/{id}
+```
+
+**Response** (204): No content.
+
+### List Agents by Project
+
+```
+GET /api/projects/{project_id}/agents
+```
+
+**Response** (200): Array of agent objects.
+
+---
+
+## Runs
+
+### Create Run
+
+```
+POST /api/runs
+```
+
+```json
+{
+  "agent_id": "uuid",
+  "task": "Implement user authentication",
+  "source_branch": "HEAD"
+}
+```
+
+Creates the run, sets up worktrees, configures hooks, and spawns the CLI in a PTY. The `source_branch` defaults to `"HEAD"`.
+
+**Response** (201):
+
+```json
+{
+  "id": "uuid",
+  "project_id": "uuid",
+  "agent_id": "uuid",
+  "task": "Implement user authentication",
+  "status": "queued",
+  "source_branch": "HEAD",
+  "run_branch": "ia-ide/run-a1b2c3d4",
+  "cli_name": "claude-code",
+  "created_at": "...",
+  "updated_at": "...",
+  "tokens_in": 0,
+  "tokens_out": 0,
+  "cost_usd": 0.0,
+  "parent_run_id": null,
+  "notify": false
+}
+```
+
+### List Runs
+
+```
+GET /api/runs
+```
+
+**Response** (200): Array of run objects.
+
+### Get Run
+
+```
+GET /api/runs/{id}
+```
+
+**Response** (200): Run object.
+
+### Delete Run
+
+```
+DELETE /api/runs/{id}
+```
+
+Cannot delete a running run. Cleans up worktrees, branches, events, and log files.
+
+**Response** (204): No content.
+
+### Cancel Run
+
+```
+POST /api/runs/{id}/cancel
+```
+
+Kills the CLI process and marks the run as cancelled. Only works on running runs.
+
+**Response** (200): OK.
+
+### Pause Run
+
+```
+POST /api/runs/{id}/pause
+```
+
+Kills the CLI process, checkpoints uncommitted changes, and marks as paused.
+
+**Response** (200): OK.
+
+### Continue Run
+
+```
+POST /api/runs/{id}/continue
+```
+
+```json
+{
+  "message": "Please also add tests for the login flow"
+}
+```
+
+Resumes a completed/paused/failed/cancelled run. Requires the run to have a `session_id`. Re-creates worktrees if needed and launches the CLI with session resume.
+
+**Response** (200): Updated run object.
+
+### Toggle Notifications
+
+```
+POST /api/runs/{id}/notify
+```
+
+```json
+{ "notify": true }
+```
+
+**Response** (200): OK.
+
+---
+
+## Events
+
+### Get Run Events
+
+```
+GET /api/runs/{id}/events
+```
+
+**Response** (200):
+
+```json
+[
+  {
+    "id": 1,
+    "run_id": "uuid",
+    "sequence": 1,
+    "event_type": "run.created",
+    "payload": { "task": "...", "source_branch": "HEAD" },
+    "created_at": "..."
+  }
+]
+```
+
+### Stream Events (SSE)
+
+```
+GET /api/runs/{id}/events/stream?last_event_id=0
+```
+
+Server-Sent Events stream. Replays events after `last_event_id`, then streams live events. Uses `keep-alive` to maintain the connection.
+
+Each SSE event has:
+- `id`: event database ID (use for reconnect)
+- `data`: JSON with event_type, payload, etc.
+
+### Event Types
+
+| Type | Source | Description |
+|------|--------|-------------|
+| `run.created` | Lifecycle | Run created with task and branch info |
+| `run.started` | Lifecycle | Run marked as running |
+| `run.completed` | Lifecycle | Run finished |
+| `run.failed` | Lifecycle | Run failed with reason |
+| `run.cancelled` | Lifecycle | Run cancelled by user |
+| `run.paused` | Lifecycle | Run paused |
+| `run.result` | Adapter | Final metrics (tokens, cost, session_id) |
+| `session.init` | Adapter | Session ID and CLI version captured |
+| `agent.token` | Adapter | Streaming text token |
+| `agent.message` | Adapter | Complete agent message |
+| `agent.tool_call` | Hook | Tool invocation (name + input) |
+| `agent.tool_result` | Hook | Tool result (output or error) |
+| `agent.needs_attention` | Hook | Permission prompt or idle prompt |
+| `agent.subagent_start` | Hook | Subagent spawned |
+| `agent.subagent_stop` | Hook | Subagent stopped |
+| `user.message` | API | User sent a continuation message |
+
+---
+
+## Changes & Git
+
+### Get Changes
+
+```
+GET /api/runs/{id}/changes
+```
+
+Returns diff of all changes made by a run.
+
+### Get Diff Stats
+
+```
+GET /api/runs/{id}/diff-stats
+```
+
+Lightweight file/insertion/deletion counts.
+
+### Commit
+
+```
+POST /api/runs/{id}/commit
+```
+
+```json
+{ "message": "feat: add auth" }
+```
+
+### Push
+
+```
+POST /api/runs/{id}/push
+```
+
+### Create PR/MR
+
+```
+POST /api/runs/{id}/pull-request
+```
+
+```json
+{
+  "title": "feat: add auth",
+  "body": "Implements login flow"
+}
+```
+
+### Rename Branch
+
+```
+POST /api/runs/{id}/rename-branch
+```
+
+```json
+{ "name": "feat/auth" }
+```
+
+### Accept Changes
+
+```
+POST /api/runs/{id}/accept
+```
+
+Pushes the run branch.
+
+### Revert Changes
+
+```
+POST /api/runs/{id}/revert
+```
+
+Resets worktrees to base commit.
+
+---
+
+## Branches
+
+### List Branches
+
+```
+GET /api/projects/{id}/branches
+```
+
+Lists all branches across all repos with metadata (ahead/behind, push status, run association).
+
+### Delete Branch
+
+```
+DELETE /api/projects/{id}/branches?branch=<name>&repo_id=<uuid>
+```
+
+### Merge Branch
+
+```
+POST /api/projects/{id}/branches/merge?branch=<name>&repo_id=<uuid>
+```
+
+### Rebase Branch
+
+```
+POST /api/projects/{id}/branches/rebase?branch=<name>&repo_id=<uuid>
+```
+
+### PR Status
+
+```
+GET /api/projects/{id}/branches/pr-status
+```
+
+Fetches PR info for pushed branches (makes network calls — use lazily).
+
+---
+
+## Tasks
+
+### Get Tasks
+
+```
+GET /api/runs/{id}/tasks
+```
+
+Reconstructed from TaskCreate/TaskUpdate hook events.
+
+---
+
+## Settings
+
+### Models
+
+```
+GET /api/settings/models
+PUT /api/settings/models
+```
+
+Provider and model configuration. See [Configuration](/docs/reference/configuration/) for the schema.
+
+### Notifications
+
+```
+GET /api/settings/notifications
+PUT /api/settings/notifications
+```
+
+Discord webhook and notification preferences.
+
+---
+
+## Hook Endpoint
+
+```
+POST /api/runs/{id}/hook
+```
+
+Called by CLI hooks. Receives the raw hook payload as JSON. See [CLI Hooks Reference](/docs/reference/hooks/) for details.
+
+---
+
+## Terminal (WebSocket)
+
+```
+GET /api/terminal?run_id=<uuid>
+```
+
+WebSocket endpoint for terminal access. Query parameters:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `run_id` | string | — | Run ID (persistent PTY mode) |
+| `cwd` | string | `$HOME` | Working directory (ephemeral mode) |
+| `cli` | string | `claude` | CLI to launch (ephemeral mode) |
+| `task` | string | — | Initial task (ephemeral `-p` mode) |
+| `cols` | int | `120` | Terminal columns |
+| `rows` | int | `30` | Terminal rows |
+
+With `run_id`: attaches to the run's persistent PTY session. Without: creates an ephemeral terminal.
+
+---
+
+## Health
+
+```
+GET /api/health
+```
+
+**Response** (200): `"ok"`
+
+---
+
+## Logs
+
+```
+GET /api/runs/{id}/logs
+```
+
+Returns raw log file content for a run (plain text).

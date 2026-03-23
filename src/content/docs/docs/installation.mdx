@@ -1,0 +1,121 @@
+---
+title: Installation
+description: Prerequisites, step-by-step installation, and environment variables for ia-ide.
+---
+
+import { Aside, Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## Prerequisites
+
+### Required
+
+| Dependency | Version | Purpose |
+|-----------|---------|---------|
+| **Rust** | 1.92+ | Backend server |
+| **Node.js** | 22+ | Frontend build |
+| **Claude Code** CLI | Latest | AI agent execution |
+
+Install Rust via [rustup.rs](https://rustup.rs). Install Claude Code:
+
+```bash
+npm install -g @anthropic-ai/claude-code
+claude login
+```
+
+### Optional
+
+| Dependency | Purpose | Install |
+|-----------|---------|---------|
+| **Codex CLI** | OpenAI agent support | `npm install -g @openai/codex` |
+| **GitHub CLI** | PR creation for GitHub repos | `brew install gh && gh auth login` |
+| **GitLab CLI** | MR creation for GitLab repos | `brew install glab && glab auth login` |
+| **VS Code** | "Open in VS Code" button | Install `code` CLI via VS Code command palette |
+
+<Aside type="note">
+No Docker is required. Agents run as local processes using your existing CLI credentials and API keys.
+</Aside>
+
+## Installation
+
+### Clone the repository
+
+```bash
+git clone https://github.com/Raznak/ia-ide.git
+cd ia-ide
+```
+
+### Start the backend
+
+```bash
+cargo run
+```
+
+This compiles and starts the Rust server on `http://127.0.0.1:3000`. On first run, it creates a SQLite database in `./data/`.
+
+### Start the frontend
+
+In a separate terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The frontend dev server starts on `http://localhost:5173`.
+
+### Using the Makefile
+
+For convenience, the Makefile runs both in parallel:
+
+<Tabs>
+  <TabItem label="Development">
+    ```bash
+    make dev    # Backend + frontend in parallel
+    ```
+  </TabItem>
+  <TabItem label="Test">
+    ```bash
+    make test   # Run all tests
+    ```
+  </TabItem>
+  <TabItem label="Production">
+    ```bash
+    make build  # Production build (backend + frontend)
+    ```
+  </TabItem>
+</Tabs>
+
+Open `http://localhost:5173` in your browser.
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `IA_IDE_DATA_DIR` | `./data` | Directory for SQLite DB and worktrees |
+| `IA_IDE_BIND` | `127.0.0.1:3000` | Server bind address |
+| `IA_IDE_FRONTEND_DIR` | `./frontend/dist` | Built frontend directory (production) |
+| `RUST_LOG` | `ia_ide=debug` | Log level (uses `tracing` crate) |
+
+Example: run on a different port with a custom data directory:
+
+```bash
+IA_IDE_BIND=0.0.0.0:8080 IA_IDE_DATA_DIR=/opt/ia-ide/data cargo run
+```
+
+## Verify Installation
+
+After starting both backend and frontend:
+
+1. Open `http://localhost:5173`
+2. You should see the ia-ide dashboard with an empty sidebar
+3. Click **"+ New Project"** — if the form appears, the backend is connected
+4. Check the backend logs for `listening on 127.0.0.1:3000`
+
+<Aside type="tip">
+If you see CORS errors, make sure the backend is running on port 3000. The frontend dev server proxies API requests there by default.
+</Aside>
+
+## Next Steps
+
+Continue to the [Quick Start](/docs/quickstart/) guide to create your first project and launch an agent session.
