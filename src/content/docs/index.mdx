@@ -62,16 +62,3 @@ make dev
 4. **Work interactively** → the agent codes, you supervise
 5. **Review changes** → diff viewer, commit, push, create PR
 6. **Get notified** on Discord when the agent finishes
-
-## Architecture
-
-| Layer | Technology |
-|-------|-----------|
-| **Backend** | Rust (axum, tokio, sqlx, SQLite) |
-| **Frontend** | React 19, Vite, TypeScript, TanStack Query, Zustand |
-| **Terminal** | xterm.js + portable-pty (WebSocket) |
-| **Execution** | Local processes with CLI hooks |
-| **Git** | GitHub (`gh`) and GitLab (`glab`) |
-| **Notifications** | Discord webhooks |
-
-No Docker required. Agents run as local processes using your existing CLI credentials.
