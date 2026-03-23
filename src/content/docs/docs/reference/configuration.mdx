@@ -7,14 +7,14 @@ import { Aside } from '@astrojs/starlight/components';
 
 ## Environment Variables
 
-ia-ide is configured through environment variables. There is no configuration file.
+Abbado is configured through environment variables. There is no configuration file.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `IA_IDE_DATA_DIR` | `./data` | Directory for SQLite database, worktrees, and run state |
 | `IA_IDE_BIND` | `127.0.0.1:3000` | Address and port the server binds to |
 | `IA_IDE_FRONTEND_DIR` | `./frontend/dist` | Path to the built frontend (production mode only) |
-| `RUST_LOG` | `ia_ide=debug` | Log level using the `tracing` crate filter syntax |
+| `RUST_LOG` | `abbado=debug` | Log level using the `tracing` crate filter syntax |
 
 ### Examples
 
@@ -27,19 +27,19 @@ IA_IDE_BIND=0.0.0.0:8080 cargo run
 Custom data directory:
 
 ```bash
-IA_IDE_DATA_DIR=/opt/ia-ide/data cargo run
+IA_IDE_DATA_DIR=/opt/abbado/data cargo run
 ```
 
 Verbose logging:
 
 ```bash
-RUST_LOG=ia_ide=trace cargo run
+RUST_LOG=abbado=trace cargo run
 ```
 
 Quiet logging (errors only):
 
 ```bash
-RUST_LOG=ia_ide=error cargo run
+RUST_LOG=abbado=error cargo run
 ```
 
 ## Data Directory
@@ -48,7 +48,7 @@ The data directory (`IA_IDE_DATA_DIR`) contains all persistent state:
 
 ```
 $IA_IDE_DATA_DIR/
-├── ia-ide.db             # SQLite database
+├── abbado.db             # SQLite database
 └── runs/
     └── <run-uuid>/
         ├── worktree/
@@ -58,11 +58,11 @@ $IA_IDE_DATA_DIR/
         └── claude-hooks.json   # Hook configuration
 ```
 
-The data directory is created automatically on first run. It is gitignored in the ia-ide repository.
+The data directory is created automatically on first run. It is gitignored in the Abbado repository.
 
 ### SQLite Database
 
-ia-ide uses a single SQLite database (`ia-ide.db`) for all persistent data:
+Abbado uses a single SQLite database (`abbado.db`) for all persistent data:
 
 - **projects** — project records
 - **project_repos** — repos linked to projects
@@ -83,7 +83,7 @@ Each run gets its own directory under `$IA_IDE_DATA_DIR/runs/<run-uuid>/`. This 
 
 - **worktree/** — git worktrees for each repo (where the agent works)
 - **cli-state/** — CLI session state for pause/resume
-- **hook.sh** — the hook script that posts events to ia-ide
+- **hook.sh** — the hook script that posts events to Abbado
 - **claude-hooks.json** — hook configuration passed to the CLI via `--settings`
 
 Deleting a run via the API cleans up all of these.
@@ -164,14 +164,14 @@ IA_IDE_FRONTEND_DIR=./frontend/dist cargo run --release
 
 ## Network
 
-ia-ide binds to `127.0.0.1:3000` by default — localhost only. To expose it on the network:
+Abbado binds to `127.0.0.1:3000` by default — localhost only. To expose it on the network:
 
 ```bash
 IA_IDE_BIND=0.0.0.0:3000 cargo run
 ```
 
 <Aside type="caution">
-ia-ide has no authentication. Do not expose it to the public internet. Use it on localhost or behind a VPN/SSH tunnel.
+Abbado has no authentication. Do not expose it to the public internet. Use it on localhost or behind a VPN/SSH tunnel.
 </Aside>
 
 The server uses:

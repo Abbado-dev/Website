@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Prerequisites, step-by-step installation, and environment variables for ia-ide.
+description: Prerequisites, step-by-step installation, and environment variables for Abbado.
 ---
 
 import { Aside, Tabs, TabItem, Code } from '@astrojs/starlight/components';
@@ -40,8 +40,8 @@ No Docker is required. Agents run as local processes using your existing CLI cre
 ### Clone the repository
 
 ```bash
-git clone https://github.com/Raznak/ia-ide.git
-cd ia-ide
+git clone https://github.com/abbado-dev/abbado.git
+cd abbado
 ```
 
 ### Start the backend
@@ -95,12 +95,12 @@ Open `http://localhost:5173` in your browser.
 | `IA_IDE_DATA_DIR` | `./data` | Directory for SQLite DB and worktrees |
 | `IA_IDE_BIND` | `127.0.0.1:3000` | Server bind address |
 | `IA_IDE_FRONTEND_DIR` | `./frontend/dist` | Built frontend directory (production) |
-| `RUST_LOG` | `ia_ide=debug` | Log level (uses `tracing` crate) |
+| `RUST_LOG` | `abbado=debug` | Log level (uses `tracing` crate) |
 
 Example: run on a different port with a custom data directory:
 
 ```bash
-IA_IDE_BIND=0.0.0.0:8080 IA_IDE_DATA_DIR=/opt/ia-ide/data cargo run
+IA_IDE_BIND=0.0.0.0:8080 IA_IDE_DATA_DIR=/opt/abbado/data cargo run
 ```
 
 ## Verify Installation
@@ -108,7 +108,7 @@ IA_IDE_BIND=0.0.0.0:8080 IA_IDE_DATA_DIR=/opt/ia-ide/data cargo run
 After starting both backend and frontend:
 
 1. Open `http://localhost:5173`
-2. You should see the ia-ide dashboard with an empty sidebar
+2. You should see the Abbado dashboard with an empty sidebar
 3. Click **"+ New Project"** — if the form appears, the backend is connected
 4. Check the backend logs for `listening on 127.0.0.1:3000`
 

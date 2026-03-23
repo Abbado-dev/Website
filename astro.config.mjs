@@ -6,11 +6,10 @@ export default defineConfig({
 	site: 'https://abbado.dev',
 	integrations: [
 		starlight({
-			title: 'abbado',
+			title: 'Abbado',
 			description: 'AI coding agent orchestrator. Multi-agent, multi-model, multi-CLI.',
 			logo: {
-				light: './src/assets/logo-light.svg',
-				dark: './src/assets/logo-dark.svg',
+				src: './src/assets/logo.svg',
 				replacesTitle: false,
 			},
 			social: [

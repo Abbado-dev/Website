@@ -1,24 +1,24 @@
 ---
 title: Task Tracking
-description: How ia-ide captures and displays TaskCreate and TaskUpdate events from Claude Code for progress tracking.
+description: How Abbado captures and displays TaskCreate and TaskUpdate events from Claude Code for progress tracking.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
 ## Overview
 
-When Claude Code uses the `TaskCreate` and `TaskUpdate` tools during a session, ia-ide captures these events and reconstructs a task list for each run. This gives you a structured view of what the agent planned to do and how far it got.
+When Claude Code uses the `TaskCreate` and `TaskUpdate` tools during a session, Abbado captures these events and reconstructs a task list for each run. This gives you a structured view of what the agent planned to do and how far it got.
 
 ## How It Works
 
-ia-ide does not implement its own task system. Instead, it **reconstructs tasks from hook events**:
+Abbado does not implement its own task system. Instead, it **reconstructs tasks from hook events**:
 
 1. The agent calls `TaskCreate` with a subject, description, and status
-2. The `PreToolUse` hook fires — ia-ide persists the tool call as an `agent.tool_call` event
-3. The `PostToolUse` hook fires — ia-ide persists the tool result as an `agent.tool_result` event (containing the task ID)
-4. When you request the task list, ia-ide replays all events and pairs `TaskCreate` calls with their results
+2. The `PreToolUse` hook fires — Abbado persists the tool call as an `agent.tool_call` event
+3. The `PostToolUse` hook fires — Abbado persists the tool result as an `agent.tool_result` event (containing the task ID)
+4. When you request the task list, Abbado replays all events and pairs `TaskCreate` calls with their results
 
-For `TaskUpdate` events, the same process applies — ia-ide updates the task's status, subject, or description based on the tool input.
+For `TaskUpdate` events, the same process applies — Abbado updates the task's status, subject, or description based on the tool input.
 
 ## Task States
 

@@ -1,6 +1,6 @@
 ---
 title: CLI Hooks Reference
-description: Complete reference for all hook events ia-ide handles, what they do, and the hook script format.
+description: Complete reference for all hook events Abbado handles, what they do, and the hook script format.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -17,7 +17,7 @@ All hook events are sent to this single endpoint. The hook event name is extract
 { "hook_event_name": "PreToolUse", ... }
 ```
 
-ia-ide checks for the event name in these fields (in order): `hook_event_name`, `event_name`, `hookEventName`.
+Abbado checks for the event name in these fields (in order): `hook_event_name`, `event_name`, `hookEventName`.
 
 ## Hook Script
 
@@ -32,7 +32,7 @@ echo "$RESPONSE"
 
 The script:
 1. Reads the hook payload from stdin (JSON, provided by the CLI)
-2. POSTs it to the ia-ide hook endpoint
+2. POSTs it to the Abbado hook endpoint
 3. Echoes the response back to the CLI
 
 ## Hook Configuration
@@ -91,9 +91,9 @@ Tool-related events use `"matcher": "*"` to match all tool names. Non-tool event
 
 **Payload fields**: Standard Claude Code hook payload.
 
-**ia-ide behavior**:
+**Abbado behavior**:
 - If the run status is not already `running`, marks it as `running`
-- This is how ia-ide transitions from `queued` or `paused` to `running`
+- This is how Abbado transitions from `queued` or `paused` to `running`
 
 **Response**: `{}`
 
@@ -106,7 +106,7 @@ Tool-related events use `"matcher": "*"` to match all tool names. Non-tool event
 **Payload fields**:
 - `last_assistant_message` (string) — the agent's last response text
 
-**ia-ide behavior**:
+**Abbado behavior**:
 - Marks the run as `paused` (idle but session still alive)
 - If the run has `notify: true`, sends a Discord notification with the last message summary
 
@@ -121,7 +121,7 @@ Tool-related events use `"matcher": "*"` to match all tool names. Non-tool event
 **Payload fields**:
 - `error` (string) — error message
 
-**ia-ide behavior**:
+**Abbado behavior**:
 - Marks the run as `failed`
 - Sends a Discord notification with the error (uses `notify_on_run_failed` setting)
 
@@ -133,7 +133,7 @@ Tool-related events use `"matcher": "*"` to match all tool names. Non-tool event
 
 **When**: User quits the CLI or the session terminates.
 
-**ia-ide behavior**:
+**Abbado behavior**:
 - If the run is `running` or `paused`, marks it as `completed`
 - If the run has `notify: true`, sends a Discord notification
 
@@ -149,7 +149,7 @@ Tool-related events use `"matcher": "*"` to match all tool names. Non-tool event
 - `tool_name` (string) — name of the tool (e.g., "Read", "Edit", "Bash")
 - `tool_input` (object) — tool input parameters
 
-**ia-ide behavior**:
+**Abbado behavior**:
 - Persists an `agent.tool_call` event with `{ "tool": "<name>", "input": <input> }`
 - This powers the real-time activity feed in the dashboard
 
@@ -165,7 +165,7 @@ Tool-related events use `"matcher": "*"` to match all tool names. Non-tool event
 - `tool_name` (string) — name of the tool
 - `tool_response` (object) — tool output
 
-**ia-ide behavior**:
+**Abbado behavior**:
 - Persists an `agent.tool_result` event with `{ "tool": "<name>", "output": <response> }`
 
 **Response**: `{}`
@@ -180,7 +180,7 @@ Tool-related events use `"matcher": "*"` to match all tool names. Non-tool event
 - `tool_name` (string) — name of the tool
 - `error` (string) — error message
 
-**ia-ide behavior**:
+**Abbado behavior**:
 - Persists an `agent.tool_result` event with `{ "tool": "<name>", "error": "<message>" }`
 
 **Response**: `{}`
@@ -195,7 +195,7 @@ Tool-related events use `"matcher": "*"` to match all tool names. Non-tool event
 - `notification_type` (string) — type of notification (e.g., `"permission_prompt"`, `"idle_prompt"`)
 - `message` (string) — notification message
 
-**ia-ide behavior**:
+**Abbado behavior**:
 - For `permission_prompt` and `idle_prompt` types:
   - Persists an `agent.needs_attention` event
   - Sends a Discord notification
@@ -212,14 +212,14 @@ Tool-related events use `"matcher": "*"` to match all tool names. Non-tool event
 **Payload fields**:
 - Standard Claude Code permission request payload
 
-**ia-ide behavior**:
+**Abbado behavior**:
 - Does nothing — returns an empty response
 - The user handles permissions directly in the terminal
 
 **Response**: `{}`
 
 <Aside type="note">
-ia-ide intentionally does not auto-approve permissions. The interactive terminal lets the user review and approve/deny each request manually.
+Abbado intentionally does not auto-approve permissions. The interactive terminal lets the user review and approve/deny each request manually.
 </Aside>
 
 ---
@@ -231,7 +231,7 @@ ia-ide intentionally does not auto-approve permissions. The interactive terminal
 **Payload fields**:
 - `agent_type` (string) — type of the subagent
 
-**ia-ide behavior**:
+**Abbado behavior**:
 - Persists an `agent.subagent_start` event
 
 **Response**: `{}`
@@ -245,7 +245,7 @@ ia-ide intentionally does not auto-approve permissions. The interactive terminal
 **Payload fields**:
 - `agent_type` (string) — type of the subagent
 
-**ia-ide behavior**:
+**Abbado behavior**:
 - Persists an `agent.subagent_stop` event
 
 **Response**: `{}`
@@ -292,8 +292,8 @@ To verify hooks are working:
 1. Start a run and open the terminal
 2. Watch the backend logs for `hook received` messages:
    ```
-   INFO ia_ide_api::runs: hook received run_id=a1b2c3d4 event=UserPromptSubmit
-   INFO ia_ide_api::runs: hook received run_id=a1b2c3d4 event=PreToolUse
+   INFO Abbado_api::runs: hook received run_id=a1b2c3d4 event=UserPromptSubmit
+   INFO Abbado_api::runs: hook received run_id=a1b2c3d4 event=PreToolUse
    ```
 3. Check the events API: `GET /api/runs/{id}/events`
 4. Verify the hook script is executable: `ls -la $IA_IDE_DATA_DIR/runs/<run-id>/hook.sh`

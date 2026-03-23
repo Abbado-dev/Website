@@ -7,9 +7,9 @@ import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
 ## Overview
 
-ia-ide provides a complete git workflow from the dashboard. After an agent makes changes, you can review, commit, push, and create pull requests without leaving the UI.
+Abbado provides a complete git workflow from the dashboard. After an agent makes changes, you can review, commit, push, and create pull requests without leaving the UI.
 
-Every agent session works on an isolated **git worktree** with its own branch (e.g., `ia-ide/run-a1b2c3d4`). This means the original repo is never modified, and multiple agents can work in parallel without conflicts.
+Every agent session works on an isolated **git worktree** with its own branch (e.g., `abbado/run-a1b2c3d4`). This means the original repo is never modified, and multiple agents can work in parallel without conflicts.
 
 ## Diff Viewer
 
@@ -60,7 +60,7 @@ POST /api/runs/{id}/commit
 }
 ```
 
-ia-ide stages all changes (`git add -A`), commits with the provided message, and returns the commit hash. Commits are authored as `ia-ide <ia-ide@localhost>`.
+Abbado stages all changes (`git add -A`), commits with the provided message, and returns the commit hash. Commits are authored as `abbado <abbado@localhost>`.
 
 If there are no uncommitted changes, the endpoint returns a 400 error.
 
@@ -88,7 +88,7 @@ Push the run's branch to the origin remote:
 POST /api/runs/{id}/push
 ```
 
-For each repo in the project, ia-ide pushes the run branch with `git push origin <branch>`. The endpoint returns the push results:
+For each repo in the project, Abbado pushes the run branch with `git push origin <branch>`. The endpoint returns the push results:
 
 ```json
 [
@@ -101,7 +101,7 @@ For each repo in the project, ia-ide pushes the run branch with `git push origin
 ```
 
 <Aside type="note">
-Push requires that the repo has a remote named `origin`. If no remote is configured, ia-ide returns an error with instructions to add one.
+Push requires that the repo has a remote named `origin`. If no remote is configured, Abbado returns an error with instructions to add one.
 </Aside>
 
 ## Create Pull Request / Merge Request
@@ -119,7 +119,7 @@ POST /api/runs/{id}/pull-request
 }
 ```
 
-ia-ide:
+Abbado:
 
 1. Pushes the branch first (if not already pushed)
 2. Detects the git provider from the remote URL

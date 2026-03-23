@@ -1,6 +1,6 @@
 ---
 title: Sessions & Terminal
-description: How ia-ide manages terminal sessions with PTY, session lifecycle, server-side persistence, and WebSocket reconnection.
+description: How Abbado manages terminal sessions with PTY, session lifecycle, server-side persistence, and WebSocket reconnection.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -12,11 +12,11 @@ A **session** (called a "run" in the data model) represents a single agent execu
 - A **PTY terminal** running the CLI (Claude or Codex) in a real pseudo-terminal
 - A **git worktree** with an isolated branch for the agent to work in
 - An **event stream** tracking tool calls, status changes, and notifications
-- **Hooks** that report agent activity back to ia-ide in real-time
+- **Hooks** that report agent activity back to Abbado in real-time
 
 ## Terminal Architecture
 
-ia-ide uses **xterm.js** in the browser connected to a **portable-pty** process on the server via WebSocket.
+Abbado uses **xterm.js** in the browser connected to a **portable-pty** process on the server via WebSocket.
 
 ```
 Browser (xterm.js) ←→ WebSocket ←→ PTY (portable-pty) ←→ CLI (claude/codex)
@@ -61,8 +61,8 @@ The running/paused cycle is what makes interactive sessions work. Each time the 
 
 State transitions happen through two mechanisms:
 
-1. **Hooks** — the CLI calls ia-ide's hook endpoint on lifecycle events (most transitions)
-2. **PTY exit** — when the CLI process exits, ia-ide marks active runs as completed (fallback)
+1. **Hooks** — the CLI calls Abbado's hook endpoint on lifecycle events (most transitions)
+2. **PTY exit** — when the CLI process exits, Abbado marks active runs as completed (fallback)
 
 ## WebSocket Connection
 
@@ -109,7 +109,7 @@ Each session stores data in the filesystem:
 $IA_IDE_DATA_DIR/runs/<run-id>/
 ├── worktree/<repo-name>/     # Git worktree (isolated branch)
 ├── cli-state/                # CLI session state (for resume)
-├── hook.sh                   # Hook script that calls ia-ide
+├── hook.sh                   # Hook script that calls Abbado
 └── claude-hooks.json         # Hook configuration for the CLI
 ```
 

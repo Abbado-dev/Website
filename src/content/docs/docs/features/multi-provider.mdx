@@ -1,13 +1,13 @@
 ---
 title: Multi-Provider Support
-description: Claude Code and Codex CLI support, provider detection, and how ia-ide handles different CLIs.
+description: Claude Code and Codex CLI support, provider detection, and how Abbado handles different CLIs.
 ---
 
 import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
 ## Overview
 
-ia-ide supports multiple AI CLI providers. Each agent is configured with a specific provider, and ia-ide handles the differences in CLI flags, hook systems, and session management.
+Abbado supports multiple AI CLI providers. Each agent is configured with a specific provider, and Abbado handles the differences in CLI flags, hook systems, and session management.
 
 ## Supported Providers
 
@@ -32,13 +32,13 @@ ia-ide supports multiple AI CLI providers. Each agent is configured with a speci
     | **Hook system** | Custom hook installation via state directory |
     | **Default models** | o3, o4-mini, GPT-4.1 |
 
-    Codex uses a different hook system. ia-ide installs hooks via `ia_ide_adapters::codex::install_run_hooks` and prepares credentials via `prepare_state_dir`. The hook response format includes a `hookSpecificOutput` wrapper.
+    Codex uses a different hook system. Abbado installs hooks via `abbado_adapters::codex::install_run_hooks` and prepares credentials via `prepare_state_dir`. The hook response format includes a `hookSpecificOutput` wrapper.
   </TabItem>
 </Tabs>
 
 ## Provider Detection
 
-When you create an agent, you set the `cli_name` field to either `claude-code` or `codex`. ia-ide uses this to:
+When you create an agent, you set the `cli_name` field to either `claude-code` or `codex`. Abbado uses this to:
 
 1. **Select the adapter** — different launch logic for each CLI
 2. **Check availability** — verify the CLI binary is installed
@@ -47,7 +47,7 @@ When you create an agent, you set the `cli_name` field to either `claude-code` o
 
 ### CLI Availability Check
 
-Before launching a run, ia-ide checks that the CLI is installed:
+Before launching a run, Abbado checks that the CLI is installed:
 
 ```
 which claude    # for claude-code
@@ -152,7 +152,7 @@ The `model` field on an agent is optional. When unset, the CLI uses its default 
 
 ## Pipeline Mode
 
-In pipeline mode (when a run has a `parent_run_id`), ia-ide uses the **stream-json adapter** instead of the PTY terminal. This mode:
+In pipeline mode (when a run has a `parent_run_id`), Abbado uses the **stream-json adapter** instead of the PTY terminal. This mode:
 
 - Launches the CLI with `-p` (prompt mode) for non-interactive execution
 - Parses the JSON output stream for events

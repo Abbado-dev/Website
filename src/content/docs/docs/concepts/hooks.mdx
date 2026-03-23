@@ -1,25 +1,25 @@
 ---
 title: Hooks Integration
-description: How ia-ide integrates with Claude Code and Codex hooks to track agent activity in real-time.
+description: How Abbado integrates with Claude Code and Codex hooks to track agent activity in real-time.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
 ## Overview
 
-ia-ide uses **CLI hooks** to get real-time visibility into what agents are doing. Instead of parsing terminal output, the CLI itself calls ia-ide's hook endpoint on every lifecycle event.
+Abbado uses **CLI hooks** to get real-time visibility into what agents are doing. Instead of parsing terminal output, the CLI itself calls Abbado's hook endpoint on every lifecycle event.
 
-This is the foundation of ia-ide's dashboard features: status tracking, activity feed, notifications, and task progress all come from hooks.
+This is the foundation of Abbado's dashboard features: status tracking, activity feed, notifications, and task progress all come from hooks.
 
 ## How It Works
 
-When ia-ide spawns a CLI session, it:
+When Abbado spawns a CLI session, it:
 
 1. **Creates a hook script** (`hook.sh`) that POSTs to `POST /api/runs/{run-id}/hook`
 2. **Generates a hooks configuration** (`claude-hooks.json`) that maps all CLI events to the hook script
 3. **Launches the CLI** with `--settings <path-to-hooks-config>`
 
-The hook script is simple — it pipes stdin (the hook payload) to the ia-ide API:
+The hook script is simple — it pipes stdin (the hook payload) to the Abbado API:
 
 ```bash
 #!/bin/bash
@@ -30,55 +30,55 @@ echo "$RESPONSE"
 
 ## Hook Events
 
-ia-ide registers handlers for all Claude Code hook events:
+Abbado registers handlers for all Claude Code hook events:
 
 ### UserPromptSubmit
 
 **Trigger**: User sends a prompt to the agent.
 
-**ia-ide behavior**: Marks the run as "running" if it was idle/queued. This is how ia-ide knows the agent is actively working.
+**Abbado behavior**: Marks the run as "running" if it was idle/queued. This is how Abbado knows the agent is actively working.
 
 ### Stop
 
 **Trigger**: Agent finishes responding to a prompt.
 
-**ia-ide behavior**: Marks the run as "paused" (idle). If notifications are enabled for this run, sends a Discord notification with the last assistant message.
+**Abbado behavior**: Marks the run as "paused" (idle). If notifications are enabled for this run, sends a Discord notification with the last assistant message.
 
 ### StopFailure
 
 **Trigger**: Agent encounters an error while processing.
 
-**ia-ide behavior**: Marks the run as "failed". Sends a Discord notification with the error message.
+**Abbado behavior**: Marks the run as "failed". Sends a Discord notification with the error message.
 
 ### SessionEnd
 
 **Trigger**: User quits the CLI or the session terminates.
 
-**ia-ide behavior**: Marks the run as "completed". Sends a Discord notification if enabled.
+**Abbado behavior**: Marks the run as "completed". Sends a Discord notification if enabled.
 
 ### PreToolUse
 
 **Trigger**: Agent is about to use a tool (Read, Edit, Bash, etc.).
 
-**ia-ide behavior**: Persists an `agent.tool_call` event with the tool name and input. This powers the real-time activity feed in the dashboard.
+**Abbado behavior**: Persists an `agent.tool_call` event with the tool name and input. This powers the real-time activity feed in the dashboard.
 
 ### PostToolUse
 
 **Trigger**: A tool call completed successfully.
 
-**ia-ide behavior**: Persists an `agent.tool_result` event with the tool response.
+**Abbado behavior**: Persists an `agent.tool_result` event with the tool response.
 
 ### PostToolUseFailure
 
 **Trigger**: A tool call failed.
 
-**ia-ide behavior**: Persists an `agent.tool_result` event with the error message.
+**Abbado behavior**: Persists an `agent.tool_result` event with the error message.
 
 ### Notification
 
 **Trigger**: Claude Code sends a notification (permission prompt, idle prompt, etc.).
 
-**ia-ide behavior**:
+**Abbado behavior**:
 - Persists an `agent.needs_attention` event for the frontend to show a badge
 - Sends a Discord notification for `permission_prompt` and `idle_prompt` types
 
@@ -86,13 +86,13 @@ ia-ide registers handlers for all Claude Code hook events:
 
 **Trigger**: Agent needs permission to perform an action.
 
-**ia-ide behavior**: Does nothing — the user handles permissions directly in the terminal. ia-ide does not auto-approve.
+**Abbado behavior**: Does nothing — the user handles permissions directly in the terminal. Abbado does not auto-approve.
 
 ### SubagentStart / SubagentStop
 
 **Trigger**: Agent spawns or stops a subagent.
 
-**ia-ide behavior**: Persists `agent.subagent_start` / `agent.subagent_stop` events for the activity feed.
+**Abbado behavior**: Persists `agent.subagent_start` / `agent.subagent_stop` events for the activity feed.
 
 ## Hooks Configuration
 
@@ -122,7 +122,7 @@ Tool-related events (`PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `Permiss
 
 ## Codex Hooks
 
-For Codex CLI, hooks are set up differently. Instead of `--settings`, Codex uses its own hook system installed via `ia_ide_adapters::codex::install_run_hooks`. The hook endpoint response format includes a `hookSpecificOutput` wrapper for Codex compatibility.
+For Codex CLI, hooks are set up differently. Instead of `--settings`, Codex uses its own hook system installed via `abbado_adapters::codex::install_run_hooks`. The hook endpoint response format includes a `hookSpecificOutput` wrapper for Codex compatibility.
 
 ## Event Flow
 
@@ -130,8 +130,8 @@ For Codex CLI, hooks are set up differently. Instead of `--settings`, Codex uses
 CLI (claude/codex)
   → hook fires (e.g., PreToolUse)
   → hook.sh pipes JSON to POST /api/runs/{id}/hook
-  → ia-ide persists event to SQLite
-  → ia-ide broadcasts event via SSE
+  → Abbado persists event to SQLite
+  → Abbado broadcasts event via SSE
   → Frontend receives event and updates UI
 ```
 

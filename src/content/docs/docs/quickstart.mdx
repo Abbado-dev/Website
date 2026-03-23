@@ -8,7 +8,7 @@ import { Aside, Steps } from '@astrojs/starlight/components';
 This guide walks you through the core workflow: project setup, agent creation, session launch, and code review.
 
 <Aside type="note">
-Make sure you have ia-ide running. See [Installation](/docs/installation/) if you haven't set it up yet.
+Make sure you have Abbado running. See [Installation](/docs/installation/) if you haven't set it up yet.
 </Aside>
 
 <Steps>
@@ -28,7 +28,7 @@ Make sure you have ia-ide running. See [Installation](/docs/installation/) if yo
    Path: /Users/you/projects/my-app
    ```
 
-   The repo must have at least one commit. ia-ide validates that the path exists and contains a `.git` directory.
+   The repo must have at least one commit. Abbado validates that the path exists and contains a `.git` directory.
 
 3. **Create an agent**
 
@@ -42,7 +42,7 @@ Make sure you have ia-ide running. See [Installation](/docs/installation/) if yo
 
 4. **Launch a session**
 
-   Click **"+ Session"** on the agent card. ia-ide will:
+   Click **"+ Session"** on the agent card. Abbado will:
 
    - Create a git worktree (isolated branch) for this run
    - Configure CLI hooks so the dashboard knows what the agent is doing
@@ -77,15 +77,15 @@ Make sure you have ia-ide running. See [Installation](/docs/installation/) if yo
    - **Push** — push the run branch to the remote
    - **Create PR/MR** — open a pull request on GitHub or merge request on GitLab
 
-   You can also rename the branch before pushing if the auto-generated name (`ia-ide/run-XXXX`) is not descriptive enough.
+   You can also rename the branch before pushing if the auto-generated name (`abbado/run-XXXX`) is not descriptive enough.
 
 </Steps>
 
 ## What Just Happened
 
-Behind the scenes, ia-ide:
+Behind the scenes, Abbado:
 
-1. Created a **git worktree** from your repo's HEAD, giving the agent an isolated branch (`ia-ide/run-XXXX`)
+1. Created a **git worktree** from your repo's HEAD, giving the agent an isolated branch (`abbado/run-XXXX`)
 2. Wrote a **hook script** that the CLI calls on every lifecycle event (tool use, stop, session end)
 3. Generated a **hooks configuration file** (`claude-hooks.json`) pointing all events to the hook script
 4. Spawned the CLI with `--settings` pointing to the hooks config
