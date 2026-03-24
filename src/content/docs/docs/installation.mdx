@@ -23,10 +23,15 @@ claude login
 Start the dashboard:
 
 ```bash
-abbado
+abbado              # foreground (logs to terminal)
+abbado start        # background service
+abbado status       # show version + active sessions
+abbado stop         # stop the background service
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+On macOS, `abbado start` uses `launchctl` (LaunchAgent). On Linux, it spawns a background process with a PID file.
 
 <Aside type="note">
 No Docker required. No Rust or Node.js needed. The binary includes everything.
