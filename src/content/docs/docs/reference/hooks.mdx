@@ -25,7 +25,7 @@ Each run gets a hook script at `$IA_IDE_DATA_DIR/runs/<run-id>/hook.sh`:
 
 ```bash
 #!/bin/bash
-RESPONSE=$(curl -s -X POST "http://127.0.0.1:3000/api/runs/<run-id>/hook" \
+RESPONSE=$(curl -s -X POST "http://127.0.0.1:4320/api/runs/<run-id>/hook" \
   -H "Content-Type: application/json" -d @- 2>/dev/null)
 echo "$RESPONSE"
 ```

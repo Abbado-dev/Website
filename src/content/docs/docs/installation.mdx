@@ -29,7 +29,7 @@ abbado status       # show version + active sessions
 abbado stop         # stop the background service
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:4320](http://localhost:4320).
 
 On macOS, `abbado start` uses `launchctl` (LaunchAgent). On Linux, it spawns a background process with a PID file.
 
@@ -72,14 +72,14 @@ For development with hot reload:
   </TabItem>
 </Tabs>
 
-In dev mode, the frontend runs on `http://localhost:5173` with API proxy to the backend on port 3000.
+In dev mode, the frontend runs on `http://localhost:5320` with API proxy to the backend on port 4320.
 
 ## Environment variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ABBADO_DATA_DIR` | `./data` | Directory for SQLite database and worktrees |
-| `ABBADO_BIND` | `127.0.0.1:3000` | Server bind address |
+| `ABBADO_BIND` | `127.0.0.1:4320` | Server bind address |
 | `ABBADO_FRONTEND_DIR` | *(embedded)* | Override frontend assets path (dev only) |
 | `RUST_LOG` | `abbado=debug` | Log level |
 
@@ -89,7 +89,7 @@ In dev mode, the frontend runs on `http://localhost:5173` with API proxy to the 
 abbado --version
 ```
 
-After starting Abbado, open [http://localhost:3000](http://localhost:3000). You should see an empty dashboard. Click **"+ New Project"** to get started.
+After starting Abbado, open [http://localhost:4320](http://localhost:4320). You should see an empty dashboard. Click **"+ New Project"** to get started.
 
 ## Next steps
 

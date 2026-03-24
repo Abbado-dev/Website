@@ -88,7 +88,7 @@ install() {
 
     success "abbado v${VERSION} installed to ${INSTALL_DIR}/${BINARY}"
     echo ""
-    echo "  Run 'abbado' to start the dashboard on http://localhost:3000"
+    echo "  Run 'abbado' to start the dashboard on http://localhost:4320"
     echo ""
 }
 
