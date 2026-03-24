@@ -23,7 +23,7 @@ The hook script is simple — it pipes stdin (the hook payload) to the Abbado AP
 
 ```bash
 #!/bin/bash
-RESPONSE=$(curl -s -X POST "http://127.0.0.1:3000/api/runs/<run-id>/hook" \
+RESPONSE=$(curl -s -X POST "http://127.0.0.1:4320/api/runs/<run-id>/hook" \
   -H "Content-Type: application/json" -d @- 2>/dev/null)
 echo "$RESPONSE"
 ```

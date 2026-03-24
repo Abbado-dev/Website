@@ -1,121 +1,96 @@
 ---
 title: Installation
-description: Prerequisites, step-by-step installation, and environment variables for Abbado.
+description: Install Abbado and start orchestrating AI coding agents.
 ---
 
-import { Aside, Tabs, TabItem, Code } from '@astrojs/starlight/components';
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
-## Prerequisites
+## Quick install
 
-### Required
+```bash
+curl -fsSL https://abbado.dev/install.sh | sh
+```
 
-| Dependency | Version | Purpose |
-|-----------|---------|---------|
-| **Rust** | 1.92+ | Backend server |
-| **Node.js** | 22+ | Frontend build |
-| **Claude Code** CLI | Latest | AI agent execution |
+This downloads the latest pre-built binary for your platform (macOS arm64/x86, Linux x86) and installs it to `/usr/local/bin/`.
 
-Install Rust via [rustup.rs](https://rustup.rs). Install Claude Code:
+Then install at least one AI CLI agent:
 
 ```bash
 npm install -g @anthropic-ai/claude-code
 claude login
 ```
 
-### Optional
+Start the dashboard:
 
-| Dependency | Purpose | Install |
-|-----------|---------|---------|
+```bash
+abbado              # foreground (logs to terminal)
+abbado start        # background service
+abbado status       # show version + active sessions
+abbado stop         # stop the background service
+```
+
+Open [http://localhost:4320](http://localhost:4320).
+
+On macOS, `abbado start` uses `launchctl` (LaunchAgent). On Linux, it spawns a background process with a PID file.
+
+<Aside type="note">
+No Docker required. No Rust or Node.js needed. The binary includes everything.
+</Aside>
+
+## Optional tools
+
+| Tool | Purpose | Install |
+|------|---------|---------|
 | **Codex CLI** | OpenAI agent support | `npm install -g @openai/codex` |
 | **GitHub CLI** | PR creation for GitHub repos | `brew install gh && gh auth login` |
 | **GitLab CLI** | MR creation for GitLab repos | `brew install glab && glab auth login` |
-| **VS Code** | "Open in VS Code" button | Install `code` CLI via VS Code command palette |
 
-<Aside type="note">
-No Docker is required. Agents run as local processes using your existing CLI credentials and API keys.
-</Aside>
+## Build from source
 
-## Installation
-
-### Clone the repository
+Requires Rust 1.92+ and Node.js 22+.
 
 ```bash
 git clone https://github.com/abbado-dev/abbado.git
 cd abbado
+make build
+./target/release/abbado
 ```
 
-### Start the backend
-
-```bash
-cargo run
-```
-
-This compiles and starts the Rust server on `http://127.0.0.1:3000`. On first run, it creates a SQLite database in `./data/`.
-
-### Start the frontend
-
-In a separate terminal:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-The frontend dev server starts on `http://localhost:5173`.
-
-### Using the Makefile
-
-For convenience, the Makefile runs both in parallel:
+For development with hot reload:
 
 <Tabs>
-  <TabItem label="Development">
+  <TabItem label="Dev mode">
     ```bash
     make dev    # Backend + frontend in parallel
     ```
   </TabItem>
-  <TabItem label="Test">
+  <TabItem label="Manual">
     ```bash
-    make test   # Run all tests
-    ```
-  </TabItem>
-  <TabItem label="Production">
-    ```bash
-    make build  # Production build (backend + frontend)
+    cargo run &
+    cd frontend && npm install && npm run dev
     ```
   </TabItem>
 </Tabs>
 
-Open `http://localhost:5173` in your browser.
+In dev mode, the frontend runs on `http://localhost:5320` with API proxy to the backend on port 4320.
 
-## Environment Variables
+## Environment variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `IA_IDE_DATA_DIR` | `./data` | Directory for SQLite DB and worktrees |
-| `IA_IDE_BIND` | `127.0.0.1:3000` | Server bind address |
-| `IA_IDE_FRONTEND_DIR` | `./frontend/dist` | Built frontend directory (production) |
-| `RUST_LOG` | `abbado=debug` | Log level (uses `tracing` crate) |
+| `ABBADO_DATA_DIR` | `./data` | Directory for SQLite database and worktrees |
+| `ABBADO_BIND` | `127.0.0.1:4320` | Server bind address |
+| `ABBADO_FRONTEND_DIR` | *(embedded)* | Override frontend assets path (dev only) |
+| `RUST_LOG` | `abbado=debug` | Log level |
 
-Example: run on a different port with a custom data directory:
+## Verify
 
 ```bash
-IA_IDE_BIND=0.0.0.0:8080 IA_IDE_DATA_DIR=/opt/abbado/data cargo run
+abbado --version
 ```
 
-## Verify Installation
+After starting Abbado, open [http://localhost:4320](http://localhost:4320). You should see an empty dashboard. Click **"+ New Project"** to get started.
 
-After starting both backend and frontend:
-
-1. Open `http://localhost:5173`
-2. You should see the Abbado dashboard with an empty sidebar
-3. Click **"+ New Project"** — if the form appears, the backend is connected
-4. Check the backend logs for `listening on 127.0.0.1:3000`
-
-<Aside type="tip">
-If you see CORS errors, make sure the backend is running on port 3000. The frontend dev server proxies API requests there by default.
-</Aside>
-
-## Next Steps
+## Next steps
 
 Continue to the [Quick Start](/docs/quickstart/) guide to create your first project and launch an agent session.

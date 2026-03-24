@@ -12,7 +12,7 @@ Abbado is configured through environment variables. There is no configuration fi
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `IA_IDE_DATA_DIR` | `./data` | Directory for SQLite database, worktrees, and run state |
-| `IA_IDE_BIND` | `127.0.0.1:3000` | Address and port the server binds to |
+| `ABBADO_BIND` | `127.0.0.1:4320` | Address and port the server binds to |
 | `IA_IDE_FRONTEND_DIR` | `./frontend/dist` | Path to the built frontend (production mode only) |
 | `RUST_LOG` | `abbado=debug` | Log level using the `tracing` crate filter syntax |
 
@@ -21,7 +21,7 @@ Abbado is configured through environment variables. There is no configuration fi
 Run on a different port:
 
 ```bash
-IA_IDE_BIND=0.0.0.0:8080 cargo run
+ABBADO_BIND=0.0.0.0:8080 cargo run
 ```
 
 Custom data directory:
@@ -153,7 +153,7 @@ PUT /api/settings/notifications
 
 ## Frontend Configuration
 
-The frontend dev server (Vite) proxies API requests to `http://localhost:3000`. This is configured in the Vite config and requires no manual setup.
+The frontend dev server (Vite) proxies API requests to `http://localhost:4320`. This is configured in the Vite config and requires no manual setup.
 
 For production, build the frontend with `npm run build` and set `IA_IDE_FRONTEND_DIR` to point to the `dist` directory. The Rust server serves the static files directly.
 
@@ -164,10 +164,10 @@ IA_IDE_FRONTEND_DIR=./frontend/dist cargo run --release
 
 ## Network
 
-Abbado binds to `127.0.0.1:3000` by default — localhost only. To expose it on the network:
+Abbado binds to `127.0.0.1:4320` by default — localhost only. To expose it on the network:
 
 ```bash
-IA_IDE_BIND=0.0.0.0:3000 cargo run
+ABBADO_BIND=0.0.0.0:4320 cargo run
 ```
 
 <Aside type="caution">
