@@ -30,7 +30,7 @@ detect_target() {
             ;;
         Linux)
             case "$ARCH" in
-                x86_64|amd64) TARGET="x86_64-unknown-linux-gnu" ;;
+                x86_64|amd64) TARGET="x86_64-unknown-linux-musl" ;;
                 *) error "unsupported Linux architecture: $ARCH (only x86_64 is supported)" ;;
             esac
             ;;
